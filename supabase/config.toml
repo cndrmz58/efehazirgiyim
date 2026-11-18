@@ -1,0 +1,19 @@
+project_id = "efe-financial-operations"
+
+[auth]
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173/auth/callback"]
+enable_signup = false
+enable_anonymous_sign_ins = false
+minimum_password_length = 12
+
+[auth.email]
+enable_signup = false
+
+[auth.email.template.invite]
+subject = "EFE Finansal Operasyonlar daveti"
+content_path = "./supabase/templates/invite.html"
+
+[auth.email.template.recovery]
+subject = "EFE Finansal Operasyonlar parola yenileme"
+content_path = "./supabase/templates/recovery.html"
