@@ -8,14 +8,13 @@ collections as its product focus.
 
 The current frontend uses React, TypeScript, Vite, and Tailwind CSS, with
 Vercel hosting configuration and GitHub Actions CI. The approved delivery is
-a manual payment table with an optional, browser-local test workspace and
-per-currency overview. Test mode starts off, has no seeded records, and is for
-example data only: never enter real company financial or personal data.
+a manual payment table, stored in Supabase behind login, with a per-currency
+overview. The former browser-local test mode was removed at the owner's request.
 
-The Supabase identity foundation includes browser auth flows and versioned
-PostgreSQL RLS migrations for organization and department access. Production
-activation is separate. Shared financial records and private Supabase Storage
-are not implemented.
+The Supabase foundation includes browser auth flows and versioned PostgreSQL
+RLS migrations for organization/department access and department-scoped,
+audited payments. Production activation (applying migrations, memberships)
+is an owner step. Private Supabase Storage is not implemented.
 Do not treat the frontend foundation as a production-ready financial system.
 
 GitHub Copilot and collaborating agents should read this guide before planning
@@ -223,8 +222,8 @@ The initial product scope is a roadmap, not a single implementation task:
 7. Transaction history.
 8. Document management.
 
-The **current narrower delivery** remains the manual payment table and
-browser-local test workspace described in the README. Wait for explicit user
+The **current narrower delivery** remains the Supabase-backed manual payment
+table described in the README. Wait for explicit user
 approval before beginning further application development or expanding the
 approved milestone. A roadmap entry alone is not authorization.
 

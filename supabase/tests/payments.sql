@@ -65,7 +65,8 @@ begin
     raise exception 'Payments RLS is not enabled';
   end if;
 
-  foreach api_role in array array['anon', 'authenticated', 'service_role'] loop
+  -- Authenticated access is granted and tested in payment_access.sql.
+  foreach api_role in array array['anon', 'service_role'] loop
     if has_table_privilege(api_role, 'public.payments', 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER')
       or has_any_column_privilege(api_role, 'public.payments', 'SELECT, INSERT, UPDATE, REFERENCES') then
       raise exception 'Unexpected payments privileges for %', api_role;

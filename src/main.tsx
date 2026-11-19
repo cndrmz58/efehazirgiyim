@@ -4,6 +4,13 @@ import { BrowserRouter } from 'react-router-dom'
 import { App } from './app/App'
 import './styles/index.css'
 
+// Removes records left by the retired browser-only test mode; they were never shared or authoritative.
+try {
+  window.localStorage.removeItem('efe:test-payments:v1')
+} catch {
+  // Storage may be blocked; there is nothing to clean up in that case.
+}
+
 const root = document.getElementById('root')
 
 if (!root) {

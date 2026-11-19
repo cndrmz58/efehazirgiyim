@@ -1,10 +1,10 @@
-import { ArrowDownUp, Plus, Search, Table2 } from 'lucide-react'
+import { ArrowDownUp, Plus, RefreshCw, Search, Table2 } from 'lucide-react'
 import { useState } from 'react'
 import { currencies, defaultCurrency } from '../../lib/currencies'
 import { tr } from '../../locales/tr'
 import { PaymentForm } from './PaymentForm'
 import { filterPayments, formatMoney, toMinorUnits, type Payment, type PaymentInput } from './payment-model'
-import { useTestPayments } from './test-payment-store'
+import { usePayments } from './payment-store'
 
 const labels = tr.payments
 
@@ -13,14 +13,16 @@ function displayDate(date: string) {
 }
 
 export function PaymentsPage() {
-  const store = useTestPayments()
+  const store = usePayments()
   const [editor, setEditor] = useState<Payment | 'new' | null>(null)
   const [query, setQuery] = useState('')
   const [type, setType] = useState('')
   const [status, setStatus] = useState('')
   const [currency, setCurrency] = useState<string>(defaultCurrency)
   const filtered = Boolean(query || type || status || currency !== defaultCurrency)
-  const payments = store.enabled ? store.payments : []
+  const payments = store.payments
+  const departments = new Map(store.departments.map((department) => [department.id, department]))
+  const ready = store.status === 'ready'
   const visible = filterPayments(payments, { query, type, status, currency })
 
   function clearFilters() {
@@ -30,8 +32,8 @@ export function PaymentsPage() {
     setCurrency(defaultCurrency)
   }
 
-  function save(input: PaymentInput) {
-    if (store.savePayment(input, editor && editor !== 'new' ? editor : undefined)) {
+  async function save(input: PaymentInput) {
+    if (await store.savePayment(input, editor && editor !== 'new' ? editor : undefined)) {
       setEditor(null)
       clearFilters()
       setCurrency(input.currency)
@@ -39,16 +41,22 @@ export function PaymentsPage() {
   }
 
   function actions(payment: Payment) {
+    const department = departments.get(payment.departmentId)
+    if (!department?.canEdit && !department?.canDelete) return null
     return (
       <div className="row-actions">
-        <button type="button" className="button-text" aria-label={`Ödemeyi düzenle: ${payment.detail}`} onClick={() => setEditor(payment)}>Düzenle</button>
-        <button type="button" className="button-text danger-text" aria-label={`Ödemeyi sil: ${payment.detail}`} onClick={() => {
-          if (window.confirm(`“${payment.detail}” test ödemesi silinsin mi?`) && store.deletePayment(payment)) {
+        {department.canEdit && <button type="button" className="button-text" disabled={store.busy} aria-label={`Ödemeyi düzenle: ${payment.detail}`} onClick={() => setEditor(payment)}>Düzenle</button>}
+        {department.canDelete && <button type="button" className="button-text danger-text" disabled={store.busy} aria-label={`Ödemeyi sil: ${payment.detail}`} onClick={async () => {
+          if (window.confirm(`“${payment.detail}” ödemesi silinsin mi? Silme işlemi denetim geçmişine kaydedilir.`) && await store.deletePayment(payment)) {
             if (editor !== 'new' && editor?.id === payment.id) setEditor(null)
           }
-        }}>Sil</button>
+        }}>Sil</button>}
       </div>
     )
+  }
+
+  function departmentName(payment: Payment) {
+    return store.departments.length > 1 && <span className="field-help">{departments.get(payment.departmentId)?.name ?? '—'}</span>
   }
 
   return (
@@ -60,24 +68,35 @@ export function PaymentsPage() {
           <p className="page-description">{labels.description}</p>
         </div>
         <div>
-          <button type="button" className="button-primary" disabled={!store.enabled || !store.available} aria-describedby="entry-unavailable" onClick={() => setEditor('new')}>
-            <Plus size={18} aria-hidden="true" /> Test Ödemesi Ekle
+          <button type="button" className="button-primary" disabled={!ready || !store.canEdit} aria-describedby="entry-unavailable" onClick={() => setEditor('new')}>
+            <Plus size={18} aria-hidden="true" /> Ödeme Ekle
           </button>
-          <p id="entry-unavailable" className="entry-help">{store.enabled ? 'Yalnızca bu tarayıcıya kaydedilir' : 'Kayıt girişi için test modunu açın'}</p>
+          <p id="entry-unavailable" className="entry-help">{!ready ? 'Kayıtlar yüklendiğinde kullanılabilir' : store.canEdit ? 'Ortak veritabanına kaydedilir' : 'Kayıt ekleme yetkiniz yok'}</p>
         </div>
       </header>
 
-      {store.enabled && store.available && editor !== null && (
-        <PaymentForm key={editor === 'new' ? 'new' : editor.id} original={editor === 'new' ? null : editor} onSave={save} onCancel={() => setEditor(null)} />
+      {store.error && <p className="form-error" role="alert">{store.error}</p>}
+      {store.feedback && <p className="action-feedback" role="status">{store.feedback}</p>}
+
+      {editor !== null && (ready || store.status === 'loading') && (
+        <PaymentForm key={editor === 'new' ? 'new' : editor.id} original={editor === 'new' ? null : editor} departments={store.departments} busy={store.busy} onSave={save} onCancel={() => setEditor(null)} />
       )}
 
-      {!store.available ? <section className="settings-card"><h2>Test kayıtları yüklenemedi</h2><p className="page-description">Yukarıdaki depolama hatasını giderin. Mevcut verilerin üzerine yazılmadı.</p></section> : (
+      {store.status === 'unconfigured' ? (
+        <section className="settings-card"><h2>Veri bağlantısı yapılandırılmadı</h2><p className="page-description">Ödemeler için Supabase bağlantı ayarları gerekir.</p></section>
+      ) : store.status === 'loading' ? (
+        <section className="settings-card"><p role="status">Ödemeler yükleniyor…</p></section>
+      ) : store.status === 'error' ? (
+        <section className="settings-card"><h2>Ödemeler yüklenemedi</h2><p className="page-description">Eksik veya eski kayıt gösterilmiyor.</p>
+          <button type="button" className="button-secondary mt-5" onClick={store.reload}><RefreshCw size={16} aria-hidden="true" /> Yeniden dene</button></section>
+      ) : (
       <section className="table-card" aria-label="Ödeme kayıtları">
         <div className="table-card-heading">
           <div className="flex items-center gap-3">
             <h2>Ödeme Tablosu</h2>
-            <span className="record-count">{visible.length} / {payments.length} test kaydı</span>
+            <span className="record-count">{visible.length} / {payments.length} kayıt</span>
           </div>
+          <button type="button" className="button-text table-hint" onClick={store.reload}><RefreshCw size={15} aria-hidden="true" /> Yenile</button>
           <span className="table-hint"><ArrowDownUp size={15} aria-hidden="true" /> Elle giriş</span>
         </div>
 
@@ -113,7 +132,7 @@ export function PaymentsPage() {
 
         <div className={`table-scroll ${visible.length ? 'populated-payment-table' : ''}`} tabIndex={0} role="region" aria-label="Yatay kaydırılabilir ödeme tablosu">
           <table>
-            <caption className="sr-only">Tarayıcıda saklanan test ödemeleri. Gerçek şirket kaydı değildir.</caption>
+            <caption className="sr-only">Ortak veritabanındaki ödeme kayıtları.</caption>
             <thead>
               <tr>
                 <th scope="col">{labels.detail}</th>
@@ -128,7 +147,7 @@ export function PaymentsPage() {
             <tbody>
               {visible.map((payment) => (
                 <tr key={payment.id} className="payment-row">
-                  <td><strong>{payment.detail}</strong>{actions(payment)}</td>
+                  <td><strong>{payment.detail}</strong>{departmentName(payment)}{actions(payment)}</td>
                   <td>{labels.types[payment.type]}</td>
                   <td className="amount-cell">{formatMoney(toMinorUnits(payment.amount), payment.currency)}</td>
                   <td>{displayDate(payment.dueOn)}</td>
@@ -141,9 +160,8 @@ export function PaymentsPage() {
                 <td colSpan={7}>
                   <div className="empty-state" aria-live="polite">
                     <span className="empty-icon"><Table2 size={28} aria-hidden="true" /></span>
-                    <h3>{!store.enabled ? 'Test modu kapalı' : filtered || payments.length > 0 ? 'Filtrelere uygun test kaydı bulunamadı' : 'Henüz test ödemesi yok'}</h3>
-                    <p>{store.enabled ? 'Test Ödemesi Ekle düğmesiyle örnek kayıt oluşturabilirsiniz.' : 'Örnek kayıt eklemek için yukarıdan test modunu açın.'}</p>
-                    <p>Gerçek şirket verisi girmeyin.</p>
+                    <h3>{filtered || payments.length > 0 ? 'Filtrelere uygun kayıt bulunamadı' : 'Henüz ödeme kaydı yok'}</h3>
+                    <p>{store.canEdit ? 'Ödeme Ekle düğmesiyle ilk kaydı oluşturabilirsiniz.' : store.departments.length === 0 ? 'Hesabınıza henüz departman atanmamış. Yöneticinize başvurun.' : 'Bu departmanlarda kayıt ekleme yetkiniz yok.'}</p>
                   </div>
                 </td>
               </tr>}
@@ -151,10 +169,10 @@ export function PaymentsPage() {
           </table>
         </div>
         {visible.length > 0 && (
-          <div className="payment-mobile-list" aria-label="Mobil test ödemeleri">
+          <div className="payment-mobile-list" aria-label="Mobil ödeme listesi">
             {visible.map((payment) => (
               <article className="payment-mobile-card" key={payment.id}>
-                <div className="mobile-card-heading"><h3>{payment.detail}</h3><span className={`payment-status status-${payment.status}`}>{labels.statuses[payment.status]}</span></div>
+                <div className="mobile-card-heading"><h3>{payment.detail}{departmentName(payment)}</h3><span className={`payment-status status-${payment.status}`}>{labels.statuses[payment.status]}</span></div>
                 <p className="mobile-amount">{formatMoney(toMinorUnits(payment.amount), payment.currency)}</p>
                 <dl>
                   <div><dt>Ödeme türü</dt><dd>{labels.types[payment.type]}</dd></div>

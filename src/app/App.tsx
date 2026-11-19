@@ -8,10 +8,8 @@ import { SetupNotice } from '../components/SetupNotice'
 import { PaymentsPage } from '../features/payments/PaymentsPage'
 import { SettingsPage } from '../features/settings/SettingsPage'
 import { OverviewPage } from '../features/overview/OverviewPage'
-import { TestPaymentsProvider } from '../features/payments/TestPaymentsProvider'
-import { TestModePanel } from '../features/payments/TestModePanel'
-import { useTestPayments } from '../features/payments/test-payment-store'
-import type { AuthConfig } from '../features/auth/auth-client'
+import { PaymentsProvider } from '../features/payments/PaymentsProvider'
+import { getLoginClient, type AuthConfig } from '../features/auth/auth-client'
 import { readEnvironment } from '../lib/environment'
 import type { EnvironmentState } from '../lib/environment'
 import { tr } from '../locales/tr'
@@ -37,7 +35,7 @@ function PlannedPage({ title }: { title: string }) {
       <header className="page-heading"><div><p className="eyebrow">ÇALIŞMA ALANI</p><h1>{title}</h1></div></header>
       <section className="settings-card">
         <h2>Bu bölüm sonraki aşamada hazırlanacak</h2>
-        <p className="page-description">Şu anda ödeme tablosu ve Genel Bakış, yalnızca test kayıtlarıyla kullanılabilir.</p>
+        <p className="page-description">Şu anda ödeme tablosu ve Genel Bakış kullanılabilir.</p>
         <Link className="button-text inline-flex mt-5" to="/payments">Ödeme tablosuna dön <ChevronRight size={18} aria-hidden="true" /></Link>
       </section>
     </>
@@ -46,7 +44,6 @@ function PlannedPage({ title }: { title: string }) {
 
 function Workspace({ environment, authConfig }: { environment: EnvironmentState; authConfig: AuthConfig | null }) {
   const [menuOpen, setMenuOpen] = useState(false)
-  const { enabled } = useTestPayments()
   const { pathname } = useLocation()
 
   if (pathname === '/auth') return <Navigate to="/giris" replace />
@@ -57,6 +54,7 @@ function Workspace({ environment, authConfig }: { environment: EnvironmentState;
   }
 
   return (
+    <PaymentsProvider client={authConfig ? getLoginClient(authConfig) : null}>
     <div className="app-shell">
       <a className="skip-link" href="#main-content">İçeriğe geç</a>
       <header className="mobile-header">
@@ -86,22 +84,21 @@ function Workspace({ environment, authConfig }: { environment: EnvironmentState;
         </nav>
         <div className="sidebar-bottom">
           <CircleHelp size={18} aria-hidden="true" />
-          <div><p>Test sürümü</p><span>Güvenli veri bağlantısı hazırlanıyor</span></div>
+          <div><p>Yardım</p><span>Erişim ve yetki için yöneticinize başvurun</span></div>
         </div>
       </aside>
 
       <div className="workspace">
         <div className="workspace-header">
           <span>{tr.application} <ChevronRight size={14} aria-hidden="true" /> Çalışma Alanı</span>
-          {authConfig && <Link className="button-text" to="/giris">Güvenli giriş</Link>}
-          <span className="development-badge">Geliştirme ortamı</span>
+          {authConfig && <Link className="button-text" to="/giris">Oturum</Link>}
+          {import.meta.env.DEV && <span className="development-badge">Geliştirme ortamı</span>}
         </div>
         <main id="main-content" tabIndex={-1}>
           <SetupNotice environment={environment} />
-          <TestModePanel />
           <Routes>
             <Route path="/" element={<Navigate to="/payments" replace />} />
-            <Route path="/payments" element={<PaymentsPage key={enabled ? 'test' : 'disabled'} />} />
+            <Route path="/payments" element={<PaymentsPage />} />
             <Route path="/overview" element={<OverviewPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             {navigation.filter(({ path }) => !['/payments', '/settings', '/overview'].includes(path)).map(({ path, label }) => (
@@ -109,10 +106,11 @@ function Workspace({ environment, authConfig }: { environment: EnvironmentState;
             ))}
             <Route path="*" element={<PlannedPage title="Sayfa bulunamadı" />} />
           </Routes>
-          <footer className="workspace-footer">EFE HAZIR GİYİM <span>Finansal Operasyonlar · Test çalışma alanı</span></footer>
+          <footer className="workspace-footer">EFE HAZIR GİYİM <span>Finansal Operasyonlar</span></footer>
         </main>
       </div>
     </div>
+    </PaymentsProvider>
   )
 }
 
@@ -131,7 +129,7 @@ export function App({ environment = readEnvironment(import.meta.env) }: { enviro
     )
   }
 
-  const workspace = <TestPaymentsProvider><Workspace environment={environment} authConfig={authConfig} /></TestPaymentsProvider>
+  const workspace = <Workspace environment={environment} authConfig={authConfig} />
 
   return authConfig
     ? <Suspense fallback={<p role="status">Oturum kontrol ediliyor…</p>}><AuthGate config={authConfig}>{workspace}</AuthGate></Suspense>

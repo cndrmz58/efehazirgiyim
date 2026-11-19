@@ -1,9 +1,15 @@
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
+import { mockSupabase, signIn } from './supabase-mock'
+
+test.beforeEach(async ({ context, page }) => {
+  await mockSupabase(context)
+  await signIn(page)
+})
 
 async function addPayment(page: Page, detail: string, amount: string, currency: string, type: string, paid = false) {
-  await page.getByRole('button', { name: 'Test Ödemesi Ekle' }).click()
-  const form = page.getByRole('form', { name: 'Test ödeme formu' })
+  await page.getByRole('button', { name: 'Ödeme Ekle' }).click()
+  const form = page.getByRole('form', { name: 'Ödeme formu' })
   await form.locator('#payment-detail').fill(detail)
   await form.locator('#payment-amount').fill(amount)
   await form.locator('#payment-currency').selectOption(currency)
@@ -12,18 +18,16 @@ async function addPayment(page: Page, detail: string, amount: string, currency: 
     await form.locator('#payment-status').selectOption('paid')
     await form.locator('#payment-paidOn').fill('2026-11-18')
   }
-  await form.getByRole('button', { name: 'Test ödemesini kaydet' }).click()
+  await form.getByRole('button', { name: 'Ödemeyi kaydet' }).click()
   await expect(form).toBeHidden()
 }
 
 test('vade tarihi tutardan sonra gösterilir ve gerçekleşen tarihten bağımsız saklanır', async ({ page, isMobile }) => {
-  await page.goto('/payments')
-  await page.getByRole('button', { name: 'Test modunu aç', exact: true }).click()
   await addPayment(page, 'Vadeli örnek', '10', 'TRY', 'invoice', true)
-  const list = isMobile ? page.getByLabel('Mobil test ödemeleri') : page.getByRole('table')
+  const list = isMobile ? page.getByLabel('Mobil ödeme listesi') : page.getByRole('table')
   const record = list.getByRole(isMobile ? 'article' : 'row').filter({ hasText: 'Vadeli örnek' })
   await record.getByRole('button', { name: 'Ödemeyi düzenle: Vadeli örnek' }).click()
-  const form = page.getByRole('form', { name: 'Test ödeme formu' })
+  const form = page.getByRole('form', { name: 'Ödeme formu' })
   await form.locator('#payment-dueOn').fill('2026-11-30')
   await form.locator('#payment-status').selectOption('unpaid')
   await expect(form.locator('#payment-paidOn')).toHaveValue('')
@@ -44,17 +48,14 @@ test('vade tarihi tutardan sonra gösterilir ve gerçekleşen tarihten bağıms�
   await expect(form.locator('#payment-dueOn')).toHaveValue('2026-11-30')
 })
 
-test('test ödemeleri kalıcıdır; düzenleme, filtreler, dashboard ve silme aynı veriyi kullanır', async ({ page, isMobile }) => {
-  await page.goto('/payments')
-  await page.getByRole('button', { name: 'Test modunu aç', exact: true }).click()
+test('ödemeler kalıcıdır; düzenleme, filtreler, dashboard ve silme aynı veriyi kullanır', async ({ page, isMobile }) => {
   await addPayment(page, 'Örnek vergi', '0,10', 'TRY', 'tax', true)
   await addPayment(page, 'Örnek fatura', '0.20', 'TRY', 'invoice')
   await addPayment(page, 'Örnek kredi', '25', 'EUR', 'credit')
   await addPayment(page, 'Örnek döviz faturası', '7.50', 'USD', 'invoice', true)
 
   await page.reload()
-  await expect(page.getByRole('button', { name: 'Test modunu kapat', exact: true })).toBeVisible()
-  const list = isMobile ? page.getByLabel('Mobil test ödemeleri') : page.getByRole('table')
+  const list = isMobile ? page.getByLabel('Mobil ödeme listesi') : page.getByRole('table')
   await expect(list.getByText('Örnek vergi', { exact: true })).toBeVisible()
   await expect(list.getByText('Örnek fatura', { exact: true })).toBeVisible()
 
@@ -70,17 +71,17 @@ test('test ödemeleri kalıcıdır; düzenleme, filtreler, dashboard ve silme ay
   await page.getByRole('button', { name: 'Filtreleri temizle' }).click()
 
   await page.goto('/overview')
-  const summary = page.getByRole('article', { name: 'TRY test özeti' })
+  const summary = page.getByRole('article', { name: 'TRY özeti' })
   await expect(summary.getByText('0,30 TL', { exact: true })).toBeVisible()
   await expect(summary.getByText('0,10 TL', { exact: true })).toBeVisible()
   await expect(summary.getByText('0,20 TL', { exact: true })).toBeVisible()
-  await expect(page.getByRole('article', { name: 'EUR test özeti' })).toContainText('25,00 EUR')
-  await expect(page.getByRole('article', { name: 'USD test özeti' })).toContainText('7,50 USD')
+  await expect(page.getByRole('article', { name: 'EUR özeti' })).toContainText('25,00 EUR')
+  await expect(page.getByRole('article', { name: 'USD özeti' })).toContainText('7,50 USD')
   await expect(page.getByRole('meter', { name: 'Fatura kayıt oranı' })).toHaveAttribute('value', '2')
 
   await page.getByRole('link', { name: 'Ödeme tablosuna git', exact: true }).click()
   await list.getByRole('button', { name: 'Ödemeyi düzenle: Örnek fatura', exact: true }).click()
-  const form = page.getByRole('form', { name: 'Test ödeme formu' })
+  const form = page.getByRole('form', { name: 'Ödeme formu' })
   await form.locator('#payment-status').selectOption('paid')
   await form.getByRole('button', { name: 'Değişiklikleri kaydet' }).click()
   await expect(form.getByRole('alert')).toContainText('İşaretli alanları kontrol edin')
@@ -99,20 +100,9 @@ test('test ödemeleri kalıcıdır; düzenleme, filtreler, dashboard ve silme ay
   await page.goto('/overview')
   await expect(summary.getByText('0,40 TL', { exact: true })).toHaveCount(2)
 
-  await page.getByRole('button', { name: 'Test modunu kapat', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Test modu kapalı' })).toBeVisible()
-  await page.getByRole('button', { name: 'Test modunu aç', exact: true }).click()
-  await expect(summary.getByText('0,40 TL', { exact: true })).toHaveCount(2)
-  page.once('dialog', (dialog) => dialog.accept())
-  await page.getByRole('button', { name: 'Tüm test verilerini sil' }).click()
-  await page.reload()
-  await page.getByRole('button', { name: 'Test modunu aç', exact: true }).click()
-  await expect(page.getByRole('region', { name: 'Para birimine göre test ödeme özetleri' }).getByText('0 kayıt', { exact: true })).toHaveCount(3)
 })
 
 test('yeni ödeme türleri saklanır ve genel bakışta özetlenir', async ({ page, isMobile }) => {
-  await page.goto('/payments')
-  await page.getByRole('button', { name: 'Test modunu aç', exact: true }).click()
   await addPayment(page, 'Maaş örneği', '100', 'TRY', 'salary', true)
   await addPayment(page, 'Sigorta örneği', '200', 'TRY', 'insurance')
   await addPayment(page, 'Kira örneği', '50', 'EUR', 'rent', true)
@@ -120,7 +110,7 @@ test('yeni ödeme türleri saklanır ve genel bakışta özetlenir', async ({ pa
   await page.reload()
 
   const filters = page.getByRole('search', { name: 'Ödemeleri filtrele' })
-  const list = isMobile ? page.getByLabel('Mobil test ödemeleri') : page.getByRole('table')
+  const list = isMobile ? page.getByLabel('Mobil ödeme listesi') : page.getByRole('table')
   await filters.getByRole('combobox', { name: 'Ödeme türü' }).selectOption({ label: 'Diğer' })
   await expect(list.getByText('Diğer örnek', { exact: true })).toBeVisible()
   await expect(list.getByText('Maaş örneği', { exact: true })).toBeHidden()
@@ -130,37 +120,35 @@ test('yeni ödeme türleri saklanır ve genel bakışta özetlenir', async ({ pa
   await expect(statuses.getByText('Toplam kayıt', { exact: true }).locator('..')).toHaveText('Toplam kayıt4')
   await expect(statuses.getByText('Ödenen kayıt', { exact: true }).locator('..')).toHaveText('Ödenen kayıt2')
   await expect(statuses.getByText('Ödenmeyen kayıt', { exact: true }).locator('..')).toHaveText('Ödenmeyen kayıt2')
-  const trySummary = page.getByRole('article', { name: 'TRY test özeti' })
+  const trySummary = page.getByRole('article', { name: 'TRY özeti' })
   await expect(trySummary.getByText('%30,8', { exact: true })).toBeVisible()
   await expect(trySummary.locator('time')).toHaveText('18.11.2026')
-  await expect(page.getByRole('article', { name: 'EUR test özeti' }).getByText('%100', { exact: true })).toBeVisible()
-  await expect(page.getByRole('article', { name: 'USD test özeti' }).locator('time')).toHaveCount(0)
+  await expect(page.getByRole('article', { name: 'EUR özeti' }).getByText('%100', { exact: true })).toBeVisible()
+  await expect(page.getByRole('article', { name: 'USD özeti' }).locator('time')).toHaveCount(0)
   for (const type of ['Maaş', 'Sigorta', 'Kira', 'Diğer']) {
     await expect(page.getByRole('meter', { name: `${type} kayıt oranı` })).toHaveAttribute('value', '1')
   }
 })
 
-test('başka sekmede güncellenen kaydın üzerine eski düzenleme yazılmaz', async ({ page, context, isMobile }) => {
-  await page.goto('/payments')
-  await page.getByRole('button', { name: 'Test modunu aç', exact: true }).click()
+test('başka oturumda güncellenen kaydın üzerine eski düzenleme yazılmaz', async ({ page, context, isMobile }) => {
   await addPayment(page, 'İki sekmeli örnek', '10', 'TRY', 'invoice')
-  const list = isMobile ? page.getByLabel('Mobil test ödemeleri') : page.getByRole('table')
+  const list = isMobile ? page.getByLabel('Mobil ödeme listesi') : page.getByRole('table')
   await list.getByRole('button', { name: 'Ödemeyi düzenle: İki sekmeli örnek', exact: true }).click()
-  const staleForm = page.getByRole('form', { name: 'Test ödeme formu' })
+  const staleForm = page.getByRole('form', { name: 'Ödeme formu' })
   await staleForm.locator('#payment-amount').fill('99')
 
   const otherPage = await context.newPage()
   await otherPage.goto('/payments')
-  const otherList = isMobile ? otherPage.getByLabel('Mobil test ödemeleri') : otherPage.getByRole('table')
+  const otherList = isMobile ? otherPage.getByLabel('Mobil ödeme listesi') : otherPage.getByRole('table')
   await otherList.getByRole('button', { name: 'Ödemeyi düzenle: İki sekmeli örnek', exact: true }).click()
-  const currentForm = otherPage.getByRole('form', { name: 'Test ödeme formu' })
+  const currentForm = otherPage.getByRole('form', { name: 'Ödeme formu' })
   await currentForm.locator('#payment-amount').fill('20')
   await currentForm.getByRole('button', { name: 'Değişiklikleri kaydet' }).click()
-  await expect(list.getByText('20,00 TL', { exact: true })).toBeVisible()
+  await expect(otherList.getByText('20,00 TL', { exact: true })).toBeVisible()
 
   await staleForm.getByRole('button', { name: 'Değişiklikleri kaydet' }).click()
-  await expect(page.getByRole('alert')).toContainText('Bu kayıt değişmiş veya silinmiş')
-  await otherPage.reload()
-  await expect(otherList.getByText('20,00 TL', { exact: true })).toBeVisible()
+  await expect(page.getByRole('alert')).toContainText('başka bir kullanıcı tarafından değiştirilmiş')
+  await expect(staleForm.locator('#payment-amount')).toHaveValue('99')
+  await expect(list.getByText('20,00 TL', { exact: true })).toBeVisible()
   await otherPage.close()
 })

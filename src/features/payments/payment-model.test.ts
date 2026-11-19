@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { filterPayments, formatMoney, paymentInputSchema, paymentSchema, summarizePayments } from './payment-model'
 
-const draft = { detail: 'Örnek test', type: 'invoice', amount: '0,10', currency: 'TRY', paidOn: '', notes: '', status: 'unpaid' }
+const draft = { departmentId: '00000000-0000-4000-8000-000000000021', detail: 'Örnek test', type: 'invoice', amount: '0,10', currency: 'TRY', paidOn: '', notes: '', status: 'unpaid' }
 
 function payment(overrides: Record<string, unknown> = {}) {
   return paymentSchema.parse({
-    ...draft, id: crypto.randomUUID(), createdAt: '2026-11-18T12:00:00Z', updatedAt: '2026-11-18T12:00:00Z', revision: 1, ...overrides,
+    ...draft, id: crypto.randomUUID(), organizationId: '00000000-0000-4000-8000-000000000011', createdAt: '2026-11-18T12:00:00Z', updatedAt: '2026-11-18T12:00:00Z', revision: 1, ...overrides,
   })
 }
 
-describe('test ödeme doğrulaması ve özetleri', () => {
+describe('ödeme doğrulaması ve özetleri', () => {
   it.each(['0', '-1', '1.005', '1.000,00', 'abc', '1e3', '1000000000000'])('geçersiz tutarı reddeder: %s', (amount) => {
     expect(paymentInputSchema.safeParse({ ...draft, amount }).success).toBe(false)
   })

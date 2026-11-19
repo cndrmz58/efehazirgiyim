@@ -1,29 +1,32 @@
 import { Link } from 'react-router-dom'
 import { formatMoney, summarizePayments } from '../payments/payment-model'
-import { useTestPayments } from '../payments/test-payment-store'
+import { usePayments } from '../payments/payment-store'
 import { tr } from '../../locales/tr'
 
 const percentFormat = new Intl.NumberFormat('tr-TR', { style: 'percent', maximumFractionDigits: 1 })
 
 export function OverviewPage() {
-  const store = useTestPayments()
-  const payments = store.enabled ? store.payments : []
+  const store = usePayments()
+  const payments = store.payments
   const summaries = summarizePayments(payments)
   const paidCount = summaries.reduce((count, summary) => count + summary.paidCount, 0)
 
   return (
     <>
       <header className="page-heading">
-        <div><p className="eyebrow">TEST VERİLERİNE GÖRE</p><h1>Genel Bakış</h1><p className="page-description">Ödeme tablosundaki test kayıtlarının özeti. Gerçek şirket bakiyesi değildir.</p></div>
+        <div><p className="eyebrow">ÖDEME KAYITLARINA GÖRE</p><h1>Genel Bakış</h1><p className="page-description">Erişiminiz olan departmanlardaki elle girilmiş ödeme kayıtlarının özeti. Banka bakiyesi değildir.</p></div>
         <Link className="button-secondary" to="/payments">Ödeme tablosuna git</Link>
       </header>
-      {!store.available ? (
-        <section className="settings-card"><h2>Özet hesaplanamadı</h2><p className="page-description">Saklanan test verileri okunamıyor. Yukarıdaki hatayı giderin.</p></section>
-      ) : !store.enabled ? (
-        <section className="settings-card"><h2>Test modu kapalı</h2><p className="page-description">Test modunu açıp ödeme eklediğinizde özet burada görünecek.</p></section>
+      {store.status === 'unconfigured' ? (
+        <section className="settings-card"><h2>Veri bağlantısı yapılandırılmadı</h2><p className="page-description">Özet için Supabase bağlantı ayarları gerekir.</p></section>
+      ) : store.status === 'loading' ? (
+        <section className="settings-card"><p role="status">Özet yükleniyor…</p></section>
+      ) : store.status === 'error' ? (
+        <section className="settings-card"><h2>Özet hesaplanamadı</h2><p className="page-description" role="alert">{store.error}</p>
+          <button type="button" className="button-secondary mt-5" onClick={store.reload}>Yeniden dene</button></section>
       ) : (
         <>
-          {payments.length === 0 && <p className="overview-empty">Henüz test kaydı yok. Ödeme tablosuna kayıt eklediğinizde bu özet otomatik güncellenir.</p>}
+          {payments.length === 0 && <p className="overview-empty">Henüz ödeme kaydı yok. Ödeme tablosuna kayıt eklediğinizde bu özet güncellenir.</p>}
           <section className="settings-card currency-summary status-summary" aria-labelledby="status-summary-heading">
             <h2 id="status-summary-heading">Kayıt durumları</h2>
             <dl>
@@ -32,9 +35,9 @@ export function OverviewPage() {
               <div><dt>Ödenmeyen kayıt</dt><dd>{payments.length - paidCount}</dd></div>
             </dl>
           </section>
-          <section className="currency-summary-grid" aria-label="Para birimine göre test ödeme özetleri">
+          <section className="currency-summary-grid" aria-label="Para birimine göre ödeme özetleri">
             {summaries.map((summary) => (
-              <article className="settings-card currency-summary" key={summary.code} aria-label={`${summary.code} test özeti`}>
+              <article className="settings-card currency-summary" key={summary.code} aria-label={`${summary.code} özeti`}>
                 <div className="currency-summary-heading"><h2>{summary.label}</h2><span className="record-count">{summary.count} kayıt</span></div>
                 <dl>
                   <div><dt>Toplam tutar</dt><dd>{formatMoney(summary.total, summary.code)}</dd></div>
@@ -50,7 +53,7 @@ export function OverviewPage() {
           </section>
           <section className="settings-card type-distribution" aria-labelledby="type-distribution-heading">
             <h2 id="type-distribution-heading">Ödeme türü dağılımı</h2>
-            <p className="page-description">{payments.length} test kaydı · Tutarlar farklı para birimleri arasında toplanmaz.</p>
+            <p className="page-description">{payments.length} kayıt · Tutarlar farklı para birimleri arasında toplanmaz.</p>
             {Object.entries(tr.payments.types).map(([type, label]) => {
               const count = payments.filter((payment) => payment.type === type).length
               return (

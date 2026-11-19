@@ -15,10 +15,13 @@ already-applied migration. SQL regression tests live in
   other active members see assigned departments. Membership changes are not
   available to application users.
 - [Manual payments](./supabase/migrations/20261118164700_manual_payments.sql):
-  creates `public.payments` only. It adds no rows, no frontend integration,
-  no automatic import from browser-local test mode. Hosted deployment has
-  not been run.
-  The existing payment screen continues to use browser-local test records.
+  creates `public.payments` with no rows and no API access.
+- [Payment access](./supabase/migrations/20261119110000_payment_access.sql):
+  adds server-owned revision/actor metadata, department-scoped RLS for the
+  payment screen, and the append-only `public.payment_audit` table.
+- None of these migrations have been applied to production yet. The owner
+  applies them manually in the Supabase SQL Editor (see below). The browser
+  test mode was removed; its records are never imported.
 
 ## Manual payments (`public.payments`)
 
@@ -29,16 +32,36 @@ already-applied migration. SQL regression tests live in
 | `payment_type` | `tax`, `credit`, `invoice`, `salary`, `insurance`, `rent`, or `other`. |
 | `amount`, `currency` | Positive exact `numeric` less than `1000000000000` with at most two fractional digits; `TRY` by default, with `EUR` and `USD` also supported. A check rejects excess precision without silently rounding it. |
 | `due_on`, `paid_on`, `status` | Optional finite due date; status is manually set to `paid` or `unpaid`. A finite actual payment date is required if paid and must be null if unpaid. The due date is independent of status. |
-| `created_at` | `timestamptz`, set to the database transaction timestamp by default. |
+| `created_at`, `created_by` | Set by trigger on insert to the transaction time and `auth.uid()`; never client-supplied or changed later. |
+| `revision`, `updated_at`, `updated_by` | Set by trigger: revision starts at 1 and increments on every update. |
 
-RLS is enabled, with no application policies. The migration explicitly
-revokes table privileges from `PUBLIC`, `anon`, `authenticated`, and
-`service_role`. Use a database owner only for migration and disposable SQL
-tests; no product workflow should use owner credentials. Before opening
-remote reads or writes, separately approve and test organization/department
-policies, audited financial changes, conflict handling and decimal-string
-API contracts. Do not copy the browser test data into a shared database.
-Collections, settlements, currency conversion, and storage are out of scope.
+### Access contract
+
+| Role | Read | Insert / update | Delete |
+| --- | --- | --- | --- |
+| Active organization `admin` | All departments in the organization | Yes | Yes |
+| Department `manager` (active member) | Assigned department | Yes | Yes |
+| Department `editor` (active member) | Assigned department | Yes | No |
+| Department `viewer` (active member) | Assigned department | No | No |
+| Others, `anon`, `service_role` | No | No | No |
+
+- `authenticated` may insert only `organization_id`, `department_id`, and the
+  editable business columns; it may update only the business columns. Record
+  ID, scope, and metadata cannot be chosen or changed by clients, and a trigger
+  rejects scope changes even for privileged sessions.
+- Clients update/delete with `id = … and revision = <seen revision>`. Zero
+  affected rows means the record changed, was deleted, or is not permitted; the
+  UI reports a conflict and reloads. Row locks make concurrent edits of the
+  same revision succeed at most once.
+- Amounts are read as `amount::text` and written as decimal strings.
+- `public.payment_audit` stores one row per insert/update/delete with the actor,
+  time, and full old/new row JSON. A `security definer` trigger writes it;
+  API roles have no write privileges. Only active organization admins can read it.
+  Deleting a payment removes it from the table, but the audit history keeps it.
+
+Use a database owner only for migrations and disposable SQL tests; no product
+workflow should use owner credentials. Collections, settlements, currency
+conversion, and storage are out of scope.
 
 ## Local SQL validation
 
@@ -87,6 +110,15 @@ One-time setup in GitHub **Settings → Environments**:
    checks** from `main` or wait for the next push. A failed local SQL check
    blocks deployment. If production schema/history has drift, investigate
    before retrying; do not auto-repair migration history or reset the database.
+
+## Manual production application (owner-approved path)
+
+The owner chose to apply migrations in the Supabase SQL Editor instead of the
+automated workflow. Run the migration files in version order inside one
+transaction, and record each version in `supabase_migrations.schema_migrations`
+so a later `supabase db push` does not try to reapply them. Never run
+`supabase/tests/*.sql` against production. If `ENABLE_DATABASE_DEPLOYMENTS`
+is later enabled, first confirm the recorded history matches the files.
 
 ## Supabase production activation (partially applied)
 

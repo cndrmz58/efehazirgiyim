@@ -26,6 +26,11 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+        env:
+          # Placeholder public config; end-to-end tests intercept every Supabase request.
+          VITE_SUPABASE_URL: https://e2e-placeholder.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_e2e_placeholder
+          VITE_APP_URL: http://127.0.0.1:4173
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
 

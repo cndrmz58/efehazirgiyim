@@ -1,7 +1,17 @@
 import { expect, test } from '@playwright/test'
+import { mockSupabase, signIn } from './supabase-mock'
 
-test('üretim çıktısında tablo ve gezinme ekran boyutuna uyum sağlar', async ({ page, isMobile }) => {
+test('oturum açılmadan çalışma alanı gösterilmez', async ({ context, page }) => {
+  await mockSupabase(context)
   await page.goto('/payments')
+  await expect(page).toHaveURL('/giris')
+  await expect(page.getByRole('heading', { name: 'Hoş geldiniz' })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Ana menü' })).toHaveCount(0)
+})
+
+test('üretim çıktısında tablo ve gezinme ekran boyutuna uyum sağlar', async ({ context, page, isMobile }) => {
+  await mockSupabase(context)
+  await signIn(page)
   await expect(page.getByRole('heading', { name: 'Ödemeler', level: 1 })).toBeVisible()
 
   const menu = page.getByRole('navigation', { name: 'Ana menü' })
@@ -39,6 +49,6 @@ test('üretim çıktısında tablo ve gezinme ekran boyutuna uyum sağlar', asyn
     expect(await tableRegion.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true)
   }
 
-  await expect(page.getByRole('button', { name: 'Test Ödemesi Ekle' })).toBeDisabled()
+  await expect(page.getByText('Test modu')).toHaveCount(0)
   await expect(page.getByRole('combobox', { name: 'Para birimi' })).toHaveValue('TRY')
 })

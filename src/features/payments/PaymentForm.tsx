@@ -3,16 +3,21 @@ import { z } from 'zod'
 import { currencies, defaultCurrency } from '../../lib/currencies'
 import { tr } from '../../locales/tr'
 import { paymentInputSchema, type Payment, type PaymentInput } from './payment-model'
+import type { Department } from './payment-repository'
 
-type FormValues = { detail: string; type: string; amount: string; currency: string; dueOn: string; paidOn: string; notes: string; status: string }
+type FormValues = { departmentId: string; detail: string; type: string; amount: string; currency: string; dueOn: string; paidOn: string; notes: string; status: string }
 type FormErrors = Partial<Record<keyof FormValues, string[]>>
 
-export function PaymentForm({ original, onSave, onCancel }: {
+export function PaymentForm({ original, departments, busy, onSave, onCancel }: {
   original: Payment | null
+  departments: readonly Department[]
+  busy: boolean
   onSave: (input: PaymentInput) => void
   onCancel: () => void
 }) {
+  const choices = original ? departments.filter(({ id }) => id === original.departmentId) : departments.filter(({ canEdit }) => canEdit)
   const [values, setValues] = useState<FormValues>(original ?? {
+    departmentId: choices.length === 1 ? choices[0]?.id ?? '' : '',
     detail: '', type: 'invoice', amount: '', currency: defaultCurrency, dueOn: '', paidOn: '', notes: '', status: 'unpaid',
   })
   const [errors, setErrors] = useState<FormErrors>({})
@@ -39,9 +44,9 @@ export function PaymentForm({ original, onSave, onCancel }: {
 
   return (
     <section className="settings-card payment-editor" aria-labelledby="payment-form-heading">
-      <h2 id="payment-form-heading">{original ? 'Test Ödemesini Düzenle' : 'Test Ödemesi Ekle'}</h2>
-      <p className="page-description">Yalnızca örnek bilgi girin. Bu kayıt gerçek ödeme işlemi gerçekleştirmez.</p>
-      <form aria-label="Test ödeme formu" noValidate onSubmit={(event) => {
+      <h2 id="payment-form-heading">{original ? 'Ödemeyi Düzenle' : 'Ödeme Ekle'}</h2>
+      <p className="page-description">Kayıt ortak veritabanına kaydedilir ve yetkili ekip üyeleri tarafından görülür. Bu form banka ödemesi gerçekleştirmez.</p>
+      <form aria-label="Ödeme formu" aria-busy={busy} noValidate onSubmit={(event) => {
         event.preventDefault()
         const parsed = paymentInputSchema.safeParse(values)
         if (!parsed.success) {
@@ -53,6 +58,14 @@ export function PaymentForm({ original, onSave, onCancel }: {
       }}>
         {Object.keys(errors).length > 0 && <p role="alert" className="form-error">Kaydedilemedi. İşaretli alanları kontrol edin.</p>}
         <div className="payment-form-grid">
+          <label className="form-field form-wide" htmlFor="payment-departmentId">Departman
+            <select {...field('departmentId')} disabled={Boolean(original)} required>
+              {!original && choices.length !== 1 && <option value="">Departman seçin</option>}
+              {choices.map(({ id, name }) => <option key={id} value={id}>{name}</option>)}
+            </select>
+            {original && <span className="field-help">Kaydın departmanı değiştirilemez.</span>}
+            {error('departmentId')}
+          </label>
           <label className="form-field form-wide" htmlFor="payment-detail">Ödeme detayı
             <input ref={detailInput} {...field('detail')} maxLength={200} required />
             {error('detail')}
@@ -90,8 +103,8 @@ export function PaymentForm({ original, onSave, onCancel }: {
           </label>
         </div>
         <div className="form-actions">
-          <button type="submit" className="button-primary">{original ? 'Değişiklikleri kaydet' : 'Test ödemesini kaydet'}</button>
-          <button type="button" className="button-secondary" onClick={onCancel}>Vazgeç</button>
+          <button type="submit" className="button-primary" disabled={busy}>{busy ? 'Kaydediliyor…' : original ? 'Değişiklikleri kaydet' : 'Ödemeyi kaydet'}</button>
+          <button type="button" className="button-secondary" disabled={busy} onClick={onCancel}>Vazgeç</button>
         </div>
       </form>
     </section>

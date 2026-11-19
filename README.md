@@ -4,19 +4,17 @@ Private payment and collection management for EFE HAZIR GIYIM.
 
 - Company website: https://www.efehazirgiyim.com
 - Planned application address: https://app.efehazirgiyim.com
-- Status: **browser-local test payments; Supabase Auth configured and three Auth users created, but memberships and database migrations are not deployed; Vercel app deployment awaits DNS and the login gate**.
+- Status: **Supabase-backed payment table behind login; browser test mode removed. Production database migrations, memberships, SMTP, and Vercel DNS/deployment are pending owner action**.
 
-The Supabase foundation adds invite-based login, password recovery, and a
-versioned RLS migration for organizations and departments. Production Auth
-now has public signup and anonymous sign-ins disabled, email/password login
-enabled, a 12-character minimum password, and the production app/callback URLs.
-Three Auth users exist, but organization/department memberships are not
-assigned. The Vercel production project is configured, and the app subdomain
-is attached, but DNS and deployment remain pending. SMTP and hosted email
-templates, shared financial records, and uploads are not active. The optional
-test workspace stores only owner-entered example records in this browser,
-never in Supabase. No sample financial records are presented as company data.
-Do not enter real company financial or personal information into test mode.
+The Supabase foundation adds invite-based login, password recovery, and
+versioned RLS migrations for organizations, departments, and payments.
+Production Auth has public signup and anonymous sign-ins disabled,
+email/password login enabled, a 12-character minimum password, and the
+production app/callback URLs. Three Auth users exist, but organization and
+department memberships are not assigned. SMTP/email templates, document
+uploads, and Vercel DNS/deployment remain pending. The former browser-only test
+mode has been removed; leftover browser test records are deleted on the next
+app load and are never imported. No sample records are presented as company data.
 
 ## Current agreed delivery: a simple manually filled table
 
@@ -33,7 +31,7 @@ Excel-like payment table rather than automated financial operations:
 | Açıklama | Manually entered notes |
 | Durum | Dropdown: Ödendi / Ödenmedi |
 
-The interface supports creating, editing, and deleting test payments, searchable
+The interface supports creating, editing, and deleting payments, searchable
 and combined type/status/currency filters, desktop tables, mobile record cards,
 and a data-driven General Overview (`/overview`). TL is the default currency
 for both new records and the initial table filter. New or edited records become
@@ -42,42 +40,34 @@ visible by resetting other filters and selecting that record's currency.
 Only **Ödemeler** and **Genel Bakış** are selectable in the sidebar. The
 other entries, including **Ayarlar**, are visible but disabled.
 
-### Using test mode
+### Using the payment table
 
-1. Open `/payments` and select **Test modunu aç**.
-2. Select **Test Ödemesi Ekle** and enter example details, type, positive amount,
-   currency, status, and optional notes.
+1. Sign in at `/giris`. Without a session the workspace is not shown.
+2. Select **Ödeme Ekle**, choose a department, and enter details, type,
+   positive amount, currency, status, and optional notes.
 3. Use a comma or period for decimals without thousands separators, for example
    `1250,50` or `1250.50`. Up to 12 whole and 2 decimal digits are supported.
 4. Enter a due date if known. An **Ödendi** record requires an actual payment
    date. Changing to **Ödenmedi** clears only the actual payment date, not
    the due date.
-5. Edit or delete individual rows/cards, or open **Genel Bakış** to see total,
+5. Edit or delete rows/cards as permitted, or open **Genel Bakış** for total,
    paid and unpaid record counts, the count by payment type, and each
-   currency's amounts, percentage of the total amount paid, and latest
-   actual payment date.
-6. Reloading retains test records and test-mode state in this browser.
-   **Test modunu kapat** hides records without deleting them.
-   **Tüm test verilerini sil** asks for confirmation, deletes them, and exits
-   test mode. This also recovers malformed test storage after confirmation.
+   currency's amounts, paid percentage, and latest actual payment date.
 
-Test mode is off on first use and is clearly labeled even when deployed as a
-preview. It does not depend on Supabase configuration. Records and mode state
-are stored under the versioned localStorage key `efe:test-payments:v1`.
-Browser storage is not encrypted, shared between employees, access-controlled,
-audited, backed up, or suitable for real company records. Clearing browser data
-or changing the origin/browser loses access to these examples. No automatic
-seed records, demo login, network persistence, or simulated production save
-are provided.
+Records are stored in `public.payments` and scoped by organization and
+department (see [database.md](./database.md)). Department **viewers** read,
+**editors** also create/edit, **managers** and organization **admins** can
+also delete. The UI hides unavailable actions, but PostgreSQL RLS enforces
+them. Every insert, update, and delete is written to an append-only audit table.
 
-Amounts are stored as canonical decimal strings and aggregated as integer
-minor units with `bigint`; currency totals are never mixed or converted.
-Every edit/deletion immediately updates the shared overview. Storage failures
-and invalid stored data show explicit errors instead of false success or
-silent resets. Cross-tab storage events refresh the view; stale edit revisions
-and detected snapshot conflicts are rejected. Browser storage has no atomic
-multi-user transaction guarantees; collaborative editing requires the future
-database-backed workflow.
+Amounts travel as decimal strings (`amount::text` on read) and are aggregated
+as integer minor units with `bigint`; currency totals are never mixed or
+converted. Edits and deletes send the record revision; if another user changed
+or removed the record first, nothing is saved, an explicit conflict message is
+shown, the open form keeps the user's input, and the list reloads. Load
+failures, including a server row limit truncating results, show an error
+rather than partial tables or totals. There is no live push update; use
+**Yenile** to fetch other users' changes.
 
 A manually entered exchange-rate field is planned, but its location,
 persistence, and meaning are deferred by the owner. No currency conversion,
@@ -276,9 +266,10 @@ are not complete. Later milestones
 must respect the narrowed manual-table scope above; partial settlements and
 additional modules require renewed confirmation rather than automatic rollout.
 
-An additional owner-approved pre-backend increment adds browser-local test
-payment CRUD and its live overview. This does not complete the database-backed
-payment module or change the future authentication/RLS requirements.
+The owner subsequently approved removing the browser-local test mode and
+connecting the manual payment table to Supabase with department-scoped RLS,
+revision-based conflict detection, and an append-only audit trail. Partial
+settlements, reversals, and the other milestone 3 items remain out of scope.
 
 | Milestone | Deliverables | Acceptance gate |
 | --- | --- | --- |
@@ -306,7 +297,8 @@ npm run dev
 ```
 
 Open the localhost URL printed by Vite. With no Supabase settings, the app
-shows the real-backend setup notice and the optional test workspace at `/payments`.
+shows a setup notice and no payment records; sign-in and data require all
+three Supabase values.
 Never expose the development server to the public internet.
 
 Environment values are optional for viewing the foundation. If configuring
@@ -423,15 +415,16 @@ separate company approval and data-handling decisions.
 ## 13. Decisions and remaining gates
 
 - Architecture and milestone 1 were approved.
-- Browser-local test data with reload persistence, clearing controls, and a
-  per-currency overview were subsequently approved before backend development.
+- The earlier browser-local test mode was retired at the owner's request; the
+  payment table now uses Supabase behind login.
 - Communication/questions and the initial UI are Turkish.
 - The manual payment table uses the columns documented above. The optional
   due date is separate from the actual payment date; it does not change status.
 - TL (TRY) is the default; EUR and USD are selectable.
 - Manual exchange-rate behavior is deferred; do not implement conversion.
-- The identity and manual-payment migrations are in the repository. Hosted
-  rollout and application access to the payment table remain separate steps.
+- The identity, manual-payment, and payment-access migrations are in the
+  repository. The owner applies them to production manually via the Supabase
+  SQL Editor (see [database.md](./database.md)), then assigns memberships.
 - The broader roadmap is retained for reference, not automatic implementation.
 - Confirm scanning, retention, recovery, and compliance requirements before any
   production document upload or live financial-data rollout.
