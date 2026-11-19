@@ -24,6 +24,8 @@ already-applied migration. SQL regression tests live in
   The owner applied the migrations and individual role assignments manually;
   the matching frontend deployment and production flow verification remain.
   The browser test mode was removed; its records are never imported.
+- Payment method is stored as `check`, `cash`, or `bank`. Historical rows stay
+  null because their method cannot be inferred; new rows must specify a method.
 
 ## Manual payments (`public.payments`)
 
@@ -32,6 +34,7 @@ already-applied migration. SQL regression tests live in
 | `id`, `organization_id`, `department_id` | UUID record ID and required organization scope. Historical department IDs remain unchanged; new payments have a null department. If present, the composite foreign key requires the department to belong to the same organization. |
 | `detail`, `notes` | Nonblank detail, up to 200 characters; optional notes, up to 2,000 characters. |
 | `payment_type` | `tax`, `credit`, `invoice`, `salary`, `insurance`, `rent`, or `other`. |
+| `payment_method` | `check`, `cash`, or `bank` for new payments. Existing rows may be null; their historical method is unknown. |
 | `amount`, `currency` | Positive exact `numeric` less than `1000000000000` with at most two fractional digits; `TRY` by default, with `EUR` and `USD` also supported. A check rejects excess precision without silently rounding it. |
 | `due_on`, `paid_on`, `status` | Optional finite due date; status is manually set to `paid` or `unpaid`. A finite actual payment date is required if paid and must be null if unpaid. The due date is independent of status. |
 | `created_at`, `created_by` | Set by trigger on insert to the transaction time and `auth.uid()`; never client-supplied or changed later. |
@@ -53,6 +56,8 @@ already-applied migration. SQL regression tests live in
   columns; new payments cannot specify a department. It may update only business
   columns. Record ID, organization, historical department and metadata cannot
   be changed by clients. Existing records and audit rows are not rewritten.
+- New payment inserts require `payment_method`; legacy rows with a null method
+  remain readable and can be assigned a method when edited.
 - Clients update/delete with `id = … and revision = <seen revision>`. Zero
   affected rows means the record changed, was deleted, or is not permitted; the
   UI reports a conflict and reloads. Row locks make concurrent edits of the

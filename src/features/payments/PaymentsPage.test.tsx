@@ -14,7 +14,7 @@ type Handler = (table: string, calls: Call[]) => Response
 
 const row = (overrides: Record<string, unknown> = {}) => ({
   id: '00000000-0000-4000-8000-000000000031', organization_id: organizationId,
-  detail: 'Kira', payment_type: 'rent', amount: '999999999999.99', currency: 'TRY', due_on: null, paid_on: null,
+  detail: 'Kira', payment_type: 'rent', payment_method: null, amount: '999999999999.99', currency: 'TRY', due_on: null, paid_on: null,
   notes: null, status: 'unpaid', revision: 1, created_at: '2026-11-19T10:00:00.123456+00:00', updated_at: '2026-11-19T10:00:00+00:00',
   ...overrides,
 })
@@ -65,9 +65,10 @@ describe('Supabase ödeme tablosu', () => {
 
     const table = await screen.findByRole('table')
     expect(within(table).getAllByRole('columnheader').map((header) => header.textContent)).toEqual([
-      'Ödeme Detayı', 'Ödeme Türü', 'Tutar', 'Vade Tarihi', 'Gerçekleşen Ödeme Tarihi', 'Açıklama', 'Durum',
+      'Ödeme Detayı', 'Ödeme Türü', 'Ödeme Şekli', 'Tutar', 'Vade Tarihi', 'Gerçekleşen Ödeme Tarihi', 'Açıklama', 'Durum',
     ])
     expect(within(table).getByText('999.999.999.999,99 TL')).toBeVisible()
+    expect(within(table).getByText('Belirtilmedi')).toBeVisible()
     expect(screen.getByRole('button', { name: 'Ödeme Ekle' })).toBeDisabled()
     expect(screen.getByText('Kayıt ekleme yetkiniz yok')).toBeVisible()
     expect(screen.queryByRole('button', { name: /Ödemeyi düzenle/ })).not.toBeInTheDocument()
@@ -132,12 +133,13 @@ describe('Supabase ödeme tablosu', () => {
     const user = userEvent.setup()
     const base = workspace('manager', [])
     const { requests } = renderPage((table, calls) => isWrite(calls)
-      ? { data: row({ id: '00000000-0000-4000-8000-000000000032', detail: 'Elektrik', payment_type: 'invoice', amount: '12.50' }), error: null }
+      ? { data: row({ id: '00000000-0000-4000-8000-000000000032', detail: 'Elektrik', payment_type: 'invoice', payment_method: 'check', amount: '12.50' }), error: null }
       : base(table, calls))
 
     await user.click(await screen.findByRole('button', { name: 'Ödeme Ekle' }))
     const form = within(screen.getByRole('form', { name: 'Ödeme formu' }))
     expect(screen.queryByLabelText('Departman')).not.toBeInTheDocument()
+    await user.selectOptions(form.getByLabelText('Ödeme şekli'), 'check')
     await user.type(form.getByLabelText('Ödeme detayı'), 'Elektrik')
     await user.type(form.getByLabelText(/Tutar/), '12,5')
     await user.click(form.getByRole('button', { name: 'Ödemeyi kaydet' }))
@@ -145,7 +147,7 @@ describe('Supabase ödeme tablosu', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Ödeme kaydedildi.')
     expect(screen.getByRole('table')).toHaveTextContent('12,50 TL')
     const insert = requests.find(({ calls }) => isWrite(calls))?.calls.find(([method]) => method === 'insert')
-    expect(insert?.[1]).toMatchObject({ organization_id: organizationId, amount: '12.50', due_on: null, notes: null })
+    expect(insert?.[1]).toMatchObject({ organization_id: organizationId, payment_method: 'check', amount: '12.50', due_on: null, notes: null })
     expect(insert?.[1]).not.toHaveProperty('department_id')
   })
 
@@ -177,6 +179,7 @@ describe('Supabase ödeme tablosu', () => {
     const [edit] = await screen.findAllByRole('button', { name: 'Ödemeyi düzenle: Kira' })
     await user.click(edit!)
     const form = within(screen.getByRole('form', { name: 'Ödeme formu' }))
+    await user.selectOptions(form.getByLabelText('Ödeme şekli'), 'bank')
     await user.type(form.getByLabelText('Açıklama'), 'yeni not')
     await user.click(form.getByRole('button', { name: 'Değişiklikleri kaydet' }))
 

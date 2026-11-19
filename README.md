@@ -24,6 +24,7 @@ Excel-like payment table rather than automated financial operations:
 | --- | --- |
 | Ödeme Detayı | Manually entered payment detail |
 | Ödeme Türü | Dropdown: Vergi, Kredi, Fatura, Maaş, Sigorta, Kira, Diğer |
+| Ödeme Şekli | Dropdown: Çek, Nakit, Banka |
 | Tutar | Decimal amount; TL (TRY) by default, EUR and USD selectable |
 | Vade Tarihi | Optional, manually entered due date, independent of status |
 | Gerçekleşen Ödeme Tarihi | Actual payment date, not the due date |
@@ -44,7 +45,8 @@ other entries, including **Ayarlar**, are visible but disabled.
 
 1. Sign in at `/giris`. Without a session the workspace is not shown.
 2. Select **Ödeme Ekle** and enter details, type,
-   positive amount, currency, status, and optional notes.
+   payment method (Çek, Nakit, or Banka), positive amount, currency, status,
+   and optional notes.
 3. Use a comma or period for decimals without thousands separators, for example
    `1250,50` or `1250.50`. Up to 12 whole and 2 decimal digits are supported.
 4. Enter a due date if known. An **Ödendi** record requires an actual payment

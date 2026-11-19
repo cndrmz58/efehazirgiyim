@@ -160,6 +160,7 @@ export function PaymentsPage() {
               <tr>
                 <th scope="col">{labels.detail}</th>
                 <th scope="col">{labels.type}</th>
+                <th scope="col">{labels.paymentMethod}</th>
                 <th scope="col" className="amount-heading">{labels.amount}</th>
                 <th scope="col">{labels.dueDate}</th>
                 <th scope="col">{labels.date}</th>
@@ -172,6 +173,7 @@ export function PaymentsPage() {
                 <tr key={payment.id} className="payment-row">
                   <td><strong>{payment.detail}</strong>{organizationName(payment)}{actions(payment)}</td>
                   <td>{labels.types[payment.type]}</td>
+                  <td>{payment.paymentMethod ? labels.paymentMethods[payment.paymentMethod] : 'Belirtilmedi'}</td>
                   <td className="amount-cell">{formatMoney(toMinorUnits(payment.amount), payment.currency)}</td>
                   <td>{displayDate(payment.dueOn)}</td>
                   <td>{displayDate(payment.paidOn)}</td>
@@ -180,7 +182,7 @@ export function PaymentsPage() {
                 </tr>
               ))}
               {visible.length === 0 && <tr>
-                <td colSpan={7}>
+                <td colSpan={8}>
                   <div className="empty-state" aria-live="polite">
                     <span className="empty-icon"><Table2 size={28} aria-hidden="true" /></span>
                     <h3>{filtered || payments.length > 0 ? 'Filtrelere uygun kayıt bulunamadı' : 'Henüz ödeme kaydı yok'}</h3>
@@ -199,6 +201,7 @@ export function PaymentsPage() {
                 <p className="mobile-amount">{formatMoney(toMinorUnits(payment.amount), payment.currency)}</p>
                 <dl>
                   <div><dt>Ödeme türü</dt><dd>{labels.types[payment.type]}</dd></div>
+                  <div><dt>{labels.paymentMethod}</dt><dd>{payment.paymentMethod ? labels.paymentMethods[payment.paymentMethod] : 'Belirtilmedi'}</dd></div>
                   <div><dt>{labels.dueDate}</dt><dd>{displayDate(payment.dueOn)}</dd></div>
                   <div><dt>Gerçekleşen ödeme tarihi</dt><dd>{displayDate(payment.paidOn)}</dd></div>
                   <div><dt>Açıklama</dt><dd>{payment.notes || '—'}</dd></div>

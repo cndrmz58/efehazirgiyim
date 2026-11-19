@@ -15,6 +15,7 @@ const paymentFields = z.object({
   organizationId: z.uuid('Şirket seçin.'),
   detail: z.string().trim().min(1, 'Ödeme detayını girin.').max(200, 'En fazla 200 karakter girin.'),
   type: z.enum(['tax', 'credit', 'invoice', 'salary', 'insurance', 'rent', 'other']),
+  paymentMethod: z.enum(['check', 'cash', 'bank']),
   amount: amountSchema,
   currency: z.enum(['TRY', 'EUR', 'USD']),
   dueOn: optionalDate.default(''),
@@ -23,7 +24,7 @@ const paymentFields = z.object({
   status: z.enum(['paid', 'unpaid']),
 })
 
-const checkPaymentDate = (payment: z.infer<typeof paymentFields>, context: z.RefinementCtx) => {
+const checkPaymentDate = (payment: { status: 'paid' | 'unpaid'; paidOn: string }, context: z.RefinementCtx) => {
   if (payment.status === 'paid' && !payment.paidOn) {
     context.addIssue({ code: 'custom', path: ['paidOn'], message: 'Ödenen kayıt için gerçekleşen ödeme tarihini girin.' })
   }
@@ -34,6 +35,7 @@ const checkPaymentDate = (payment: z.infer<typeof paymentFields>, context: z.Ref
 
 export const paymentInputSchema = paymentFields.superRefine(checkPaymentDate)
 export const paymentSchema = paymentFields.extend({
+  paymentMethod: z.enum(['check', 'cash', 'bank']).nullable(),
   id: z.uuid(),
   createdAt: z.iso.datetime({ offset: true }),
   updatedAt: z.iso.datetime({ offset: true }),

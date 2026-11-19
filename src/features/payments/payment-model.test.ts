@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { filterPayments, formatMoney, paymentInputSchema, paymentSchema, summarizePayments } from './payment-model'
 
-const draft = { organizationId: '00000000-0000-4000-8000-000000000011', detail: 'Örnek test', type: 'invoice', amount: '0,10', currency: 'TRY', paidOn: '', notes: '', status: 'unpaid' }
+const draft = { organizationId: '00000000-0000-4000-8000-000000000011', detail: 'Örnek test', type: 'invoice', paymentMethod: 'bank', amount: '0,10', currency: 'TRY', paidOn: '', notes: '', status: 'unpaid' }
 
 function payment(overrides: Record<string, unknown> = {}) {
   return paymentSchema.parse({
@@ -12,6 +12,15 @@ function payment(overrides: Record<string, unknown> = {}) {
 describe('ödeme doğrulaması ve özetleri', () => {
   it.each(['0', '-1', '1.005', '1.000,00', 'abc', '1e3', '1000000000000'])('geçersiz tutarı reddeder: %s', (amount) => {
     expect(paymentInputSchema.safeParse({ ...draft, amount }).success).toBe(false)
+  })
+
+  it('ödeme şekli seçimini zorunlu tutar ve eski kayıtların bilinmeyen şeklini kabul eder', () => {
+    expect(paymentInputSchema.safeParse({ ...draft, paymentMethod: '' }).success).toBe(false)
+    expect(paymentInputSchema.safeParse({ ...draft, paymentMethod: 'transfer' }).success).toBe(false)
+    expect(paymentSchema.safeParse({
+      ...draft, paymentMethod: null, id: crypto.randomUUID(), createdAt: '2026-11-18T12:00:00Z',
+      updatedAt: '2026-11-18T12:00:00Z', revision: 1,
+    }).success).toBe(true)
   })
 
   it('gerçekleşen tarihi yalnızca ödenen kayıtta zorunlu tutar ve takvim tarihini doğrular', () => {

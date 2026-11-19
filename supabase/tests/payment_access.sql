@@ -29,10 +29,10 @@ insert into public.department_memberships values
   ('00000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000021', '00000000-0000-4000-8000-000000000003', 'manager');
 
 -- Existing records keep their historical department.
-insert into public.payments (id, organization_id, department_id, detail, payment_type, amount, status) values
-  ('00000000-0000-4000-8000-000000000031', '00000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000021', 'Finance record', 'rent', 5, 'unpaid'),
-  ('00000000-0000-4000-8000-000000000032', '00000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000022', 'Sales record', 'rent', 5, 'unpaid'),
-  ('00000000-0000-4000-8000-000000000033', '00000000-0000-4000-8000-000000000012', '00000000-0000-4000-8000-000000000023', 'Other org', 'rent', 5, 'unpaid');
+insert into public.payments (id, organization_id, department_id, detail, payment_type, payment_method, amount, status) values
+  ('00000000-0000-4000-8000-000000000031', '00000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000021', 'Finance record', 'rent', 'bank', 5, 'unpaid'),
+  ('00000000-0000-4000-8000-000000000032', '00000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000022', 'Sales record', 'rent', 'cash', 5, 'unpaid'),
+  ('00000000-0000-4000-8000-000000000033', '00000000-0000-4000-8000-000000000012', '00000000-0000-4000-8000-000000000023', 'Other org', 'rent', 'check', 5, 'unpaid');
 
 set local role anon;
 do $$ begin
@@ -51,8 +51,8 @@ begin
   if (select count(*) from public.payments) <> 2 then
     raise exception 'Manager cannot see all organization records or sees another organization';
   end if;
-  insert into public.payments (organization_id, detail, payment_type, amount, status)
-  values ('00000000-0000-4000-8000-000000000011', 'Invoice', 'invoice', '1250.50', 'unpaid')
+  insert into public.payments (organization_id, detail, payment_type, payment_method, amount, status)
+  values ('00000000-0000-4000-8000-000000000011', 'Invoice', 'invoice', 'bank', '1250.50', 'unpaid')
   returning * into created;
   perform set_config('test.payment_id', created.id::text, true);
   if created.department_id is not null or created.revision <> 1
@@ -61,20 +61,20 @@ begin
   then raise exception 'Insert metadata, scope or amount is wrong'; end if;
 
   begin
-    insert into public.payments (organization_id, detail, payment_type, amount, status)
-    values ('00000000-0000-4000-8000-000000000012', 'Foreign', 'invoice', 1, 'unpaid');
+    insert into public.payments (organization_id, detail, payment_type, payment_method, amount, status)
+    values ('00000000-0000-4000-8000-000000000012', 'Foreign', 'invoice', 'bank', 1, 'unpaid');
     raise exception 'Cross-organization insert succeeded';
   exception when insufficient_privilege then null;
   end;
   begin
-    insert into public.payments (organization_id, department_id, detail, payment_type, amount, status)
-    values ('00000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000021', 'Scope', 'invoice', 1, 'unpaid');
+    insert into public.payments (organization_id, department_id, detail, payment_type, payment_method, amount, status)
+    values ('00000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000021', 'Scope', 'invoice', 'bank', 1, 'unpaid');
     raise exception 'Client selected a department';
   exception when insufficient_privilege then null;
   end;
   begin
-    insert into public.payments (organization_id, detail, payment_type, amount, status, revision)
-    values ('00000000-0000-4000-8000-000000000011', 'Spoof', 'invoice', 1, 'unpaid', 9);
+    insert into public.payments (organization_id, detail, payment_type, payment_method, amount, status, revision)
+    values ('00000000-0000-4000-8000-000000000011', 'Spoof', 'invoice', 'bank', 1, 'unpaid', 9);
     raise exception 'Client chose a revision';
   exception when insufficient_privilege then null;
   end;
@@ -118,8 +118,8 @@ declare changed integer;
 begin
   if (select count(*) from public.payments) <> 3 then raise exception 'Viewer visibility is wrong'; end if;
   begin
-    insert into public.payments (organization_id, detail, payment_type, amount, status)
-    values ('00000000-0000-4000-8000-000000000011', 'Viewer', 'invoice', 1, 'unpaid');
+    insert into public.payments (organization_id, detail, payment_type, payment_method, amount, status)
+    values ('00000000-0000-4000-8000-000000000011', 'Viewer', 'invoice', 'bank', 1, 'unpaid');
     raise exception 'Viewer inserted a payment';
   exception when insufficient_privilege then null;
   end;
@@ -136,8 +136,8 @@ select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000003
 do $$ begin
   if exists (select from public.payments) then raise exception 'Unassigned member reads payments'; end if;
   begin
-    insert into public.payments (organization_id, detail, payment_type, amount, status)
-    values ('00000000-0000-4000-8000-000000000011', 'Unassigned', 'invoice', 1, 'unpaid');
+    insert into public.payments (organization_id, detail, payment_type, payment_method, amount, status)
+    values ('00000000-0000-4000-8000-000000000011', 'Unassigned', 'invoice', 'bank', 1, 'unpaid');
     raise exception 'Unassigned member inserted a payment';
   exception when insufficient_privilege then null;
   end;
@@ -185,8 +185,8 @@ select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000001
 do $$ begin
   if exists (select from public.payments) then raise exception 'Suspended member reads payments'; end if;
   begin
-    insert into public.payments (organization_id, detail, payment_type, amount, status)
-    values ('00000000-0000-4000-8000-000000000011', 'Suspended', 'invoice', 1, 'unpaid');
+    insert into public.payments (organization_id, detail, payment_type, payment_method, amount, status)
+    values ('00000000-0000-4000-8000-000000000011', 'Suspended', 'invoice', 'bank', 1, 'unpaid');
     raise exception 'Suspended member inserted a payment';
   exception when insufficient_privilege then null;
   end;

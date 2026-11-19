@@ -17,6 +17,7 @@ export const tr = {
     description: 'Ödemelerinizi tek bir tabloda, kolayca takip edin.',
     detail: 'Ödeme Detayı',
     type: 'Ödeme Türü',
+    paymentMethod: 'Ödeme Şekli',
     amount: 'Tutar',
     dueDate: 'Vade Tarihi',
     date: 'Gerçekleşen Ödeme Tarihi',
@@ -30,6 +31,11 @@ export const tr = {
       insurance: 'Sigorta',
       rent: 'Kira',
       other: 'Diğer',
+    },
+    paymentMethods: {
+      check: 'Çek',
+      cash: 'Nakit',
+      bank: 'Banka',
     },
     statuses: {
       paid: 'Ödendi',

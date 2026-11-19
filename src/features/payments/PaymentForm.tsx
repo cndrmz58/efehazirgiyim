@@ -6,7 +6,7 @@ import { paymentInputSchema, type Payment, type PaymentInput } from './payment-m
 import type { PaymentOrganization } from './payment-repository'
 import { TurkishDateInput } from './TurkishDateInput'
 
-type FormValues = { organizationId: string; detail: string; type: string; amount: string; currency: string; dueOn: string; paidOn: string; notes: string; status: string }
+type FormValues = { organizationId: string; detail: string; type: string; paymentMethod: string; amount: string; currency: string; dueOn: string; paidOn: string; notes: string; status: string }
 type FormErrors = Partial<Record<keyof FormValues, string[]>>
 
 export function PaymentForm({ original, organizations, busy, onSave, onCancel }: {
@@ -17,9 +17,9 @@ export function PaymentForm({ original, organizations, busy, onSave, onCancel }:
   onCancel: () => void
 }) {
   const choices = original ? organizations.filter(({ id }) => id === original.organizationId) : organizations.filter(({ canEdit }) => canEdit)
-  const [values, setValues] = useState<FormValues>(original ?? {
+  const [values, setValues] = useState<FormValues>(original ? { ...original, paymentMethod: original.paymentMethod ?? '' } : {
     organizationId: choices.length === 1 ? choices[0]?.id ?? '' : '',
-    detail: '', type: 'invoice', amount: '', currency: defaultCurrency, dueOn: '', paidOn: '', notes: '', status: 'unpaid',
+    detail: '', type: 'invoice', paymentMethod: '', amount: '', currency: defaultCurrency, dueOn: '', paidOn: '', notes: '', status: 'unpaid',
   })
   const [errors, setErrors] = useState<FormErrors>({})
   const detailInput = useRef<HTMLInputElement>(null)
@@ -73,6 +73,13 @@ export function PaymentForm({ original, organizations, busy, onSave, onCancel }:
           <label className="form-field" htmlFor="payment-type">Ödeme türü
             <select {...field('type')}>{Object.entries(tr.payments.types).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
             {error('type')}
+          </label>
+          <label className="form-field" htmlFor="payment-paymentMethod">Ödeme şekli
+            <select {...field('paymentMethod')} required>
+              <option value="">Ödeme şekli seçin</option>
+              {Object.entries(tr.payments.paymentMethods).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+            {error('paymentMethod')}
           </label>
           <label className="form-field" htmlFor="payment-status">Durum
             <select {...field('status')}>{Object.entries(tr.payments.statuses).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>

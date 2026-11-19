@@ -14,6 +14,7 @@ async function addPayment(page: Page, detail: string, amount: string, currency: 
   await form.locator('#payment-amount').fill(amount)
   await form.locator('#payment-currency').selectOption(currency)
   await form.locator('#payment-type').selectOption(type)
+  await form.locator('#payment-paymentMethod').selectOption('bank')
   if (dueOn) await form.locator('#payment-dueOn').fill(dueOn)
   if (paid) {
     await form.locator('#payment-status').selectOption('paid')
@@ -38,10 +39,11 @@ test('vade tarihi tutardan sonra gösterilir ve gerçekleşen tarihten bağıms�
   await page.reload()
   if (!isMobile) {
     const headings = list.getByRole('columnheader')
-    await expect(headings.nth(2)).toHaveText('Tutar')
-    await expect(headings.nth(3)).toHaveText('Vade Tarihi')
-    await expect(headings.nth(4)).toHaveText('Gerçekleşen Ödeme Tarihi')
-    await expect(record.getByRole('cell').nth(3)).toHaveText('30.11.2026')
+    await expect(headings.nth(2)).toHaveText('Ödeme Şekli')
+    await expect(headings.nth(3)).toHaveText('Tutar')
+    await expect(headings.nth(4)).toHaveText('Vade Tarihi')
+    await expect(headings.nth(5)).toHaveText('Gerçekleşen Ödeme Tarihi')
+    await expect(record.getByRole('cell').nth(4)).toHaveText('30.11.2026')
   } else {
     await expect(record.getByText('Vade Tarihi', { exact: true }).locator('..')).toContainText('30.11.2026')
   }
