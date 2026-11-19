@@ -7,24 +7,22 @@ import { PaymentsProvider } from './PaymentsProvider'
 
 const userId = '00000000-0000-4000-8000-000000000001'
 const organizationId = '00000000-0000-4000-8000-000000000011'
-const departmentId = '00000000-0000-4000-8000-000000000021'
 
 type Call = [string, ...unknown[]]
 type Response = { data: unknown; error: { code: string } | null; count?: number }
 type Handler = (table: string, calls: Call[]) => Response
 
 const row = (overrides: Record<string, unknown> = {}) => ({
-  id: '00000000-0000-4000-8000-000000000031', organization_id: organizationId, department_id: departmentId,
+  id: '00000000-0000-4000-8000-000000000031', organization_id: organizationId,
   detail: 'Kira', payment_type: 'rent', amount: '999999999999.99', currency: 'TRY', due_on: null, paid_on: null,
   notes: null, status: 'unpaid', revision: 1, created_at: '2026-11-19T10:00:00.123456+00:00', updated_at: '2026-11-19T10:00:00+00:00',
   ...overrides,
 })
 
-function workspace(role: 'editor' | 'viewer', rows: unknown[] = [row()], count = rows.length): Handler {
+function workspace(role: 'manager' | 'viewer' | null, rows: unknown[] = [row()], count = rows.length): Handler {
   return (table) => ({
-    departments: { data: [{ id: departmentId, organization_id: organizationId, name: 'Finans' }], error: null },
-    organization_memberships: { data: [{ organization_id: organizationId, role: 'member' }], error: null },
-    department_memberships: { data: [{ department_id: departmentId, role }], error: null },
+    organizations: { data: [{ id: organizationId, name: 'Şirket' }], error: null },
+    organization_memberships: { data: [{ organization_id: organizationId, role: 'member', payment_role: role }], error: null },
     payments: { data: rows, error: null, count },
   }[table] ?? { data: null, error: { code: 'unexpected' } })
 }
@@ -94,24 +92,31 @@ describe('Supabase ödeme tablosu', () => {
     expect(screen.getByRole('searchbox', { name: 'Ödeme ara' })).toHaveValue('')
   })
 
+  it('ödeme rolü olmayan üyeyi kayıt eklemeye yetkili saymaz', async () => {
+    renderPage(workspace(null, []))
+
+    expect(await screen.findByRole('button', { name: 'Ödeme Ekle' })).toBeDisabled()
+    expect(screen.getByText('Hesabınıza ödeme erişimi atanmamış. Yöneticinize başvurun.')).toBeVisible()
+  })
+
   it('sunucu satır sınırı kayıtları kestiğinde eksik tablo göstermez', async () => {
-    renderPage(workspace('editor', [row()], 2))
+    renderPage(workspace('manager', [row()], 2))
 
     expect(await screen.findByRole('heading', { name: 'Ödemeler yüklenemedi' })).toBeVisible()
     expect(screen.getByRole('alert')).toHaveTextContent('Tüm ödeme kayıtları yüklenemedi')
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
   })
 
-  it('yeni ödemeyi ondalık metin ve departman kapsamıyla kaydeder', async () => {
+  it('yeni ödemeyi ondalık metin ve şirket kapsamıyla kaydeder', async () => {
     const user = userEvent.setup()
-    const base = workspace('editor', [])
+    const base = workspace('manager', [])
     const { requests } = renderPage((table, calls) => isWrite(calls)
       ? { data: row({ id: '00000000-0000-4000-8000-000000000032', detail: 'Elektrik', payment_type: 'invoice', amount: '12.50' }), error: null }
       : base(table, calls))
 
     await user.click(await screen.findByRole('button', { name: 'Ödeme Ekle' }))
     const form = within(screen.getByRole('form', { name: 'Ödeme formu' }))
-    expect(form.getByLabelText('Departman')).toHaveValue(departmentId)
+    expect(screen.queryByLabelText('Departman')).not.toBeInTheDocument()
     await user.type(form.getByLabelText('Ödeme detayı'), 'Elektrik')
     await user.type(form.getByLabelText(/Tutar/), '12,5')
     await user.click(form.getByRole('button', { name: 'Ödemeyi kaydet' }))
@@ -119,12 +124,33 @@ describe('Supabase ödeme tablosu', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Ödeme kaydedildi.')
     expect(screen.getByRole('table')).toHaveTextContent('12,50 TL')
     const insert = requests.find(({ calls }) => isWrite(calls))?.calls.find(([method]) => method === 'insert')
-    expect(insert?.[1]).toMatchObject({ organization_id: organizationId, department_id: departmentId, amount: '12.50', due_on: null, notes: null })
+    expect(insert?.[1]).toMatchObject({ organization_id: organizationId, amount: '12.50', due_on: null, notes: null })
+    expect(insert?.[1]).not.toHaveProperty('department_id')
+  })
+
+  it('birden fazla yetkili şirket varsa yeni kaydın şirketini seçtirir', async () => {
+    const user = userEvent.setup()
+    const secondId = '00000000-0000-4000-8000-000000000012'
+    const base = workspace('manager', [])
+    renderPage((table, calls) => {
+      if (table === 'organizations') return { data: [{ id: organizationId, name: 'Birinci' }, { id: secondId, name: 'İkinci' }], error: null }
+      if (table === 'organization_memberships') return { data: [
+        { organization_id: organizationId, role: 'member', payment_role: 'manager' },
+        { organization_id: secondId, role: 'member', payment_role: 'manager' },
+      ], error: null }
+      return base(table, calls)
+    })
+
+    await user.click(await screen.findByRole('button', { name: 'Ödeme Ekle' }))
+    const company = screen.getByLabelText('Şirket')
+    expect(company).toHaveValue('')
+    await user.selectOptions(company, secondId)
+    expect(company).toHaveValue(secondId)
   })
 
   it('eski revizyonla düzenlemede başarı göstermez, girdiyi korur ve listeyi yeniler', async () => {
     const user = userEvent.setup()
-    const base = workspace('editor')
+    const base = workspace('manager')
     const { requests } = renderPage((table, calls) => isWrite(calls) ? { data: [], error: null } : base(table, calls))
 
     const [edit] = await screen.findAllByRole('button', { name: 'Ödemeyi düzenle: Kira' })

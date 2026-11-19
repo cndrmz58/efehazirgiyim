@@ -3,12 +3,11 @@ import { z } from 'zod'
 import { paymentSchema, type Payment, type PaymentInput } from './payment-model'
 
 // Amounts are read as text so exact decimal values never pass through a JavaScript number.
-const columns = 'id, organization_id, department_id, detail, payment_type, amount::text, currency, due_on, paid_on, notes, status, revision, created_at, updated_at'
+const columns = 'id, organization_id, detail, payment_type, amount::text, currency, due_on, paid_on, notes, status, revision, created_at, updated_at'
 
 const rowSchema = z.object({
   id: z.string(),
   organization_id: z.string(),
-  department_id: z.string(),
   detail: z.string(),
   payment_type: z.string(),
   amount: z.string(),
@@ -22,12 +21,15 @@ const rowSchema = z.object({
   updated_at: z.string(),
 })
 
-const departmentRowSchema = z.object({ id: z.uuid(), organization_id: z.uuid(), name: z.string() })
-const organizationRoleSchema = z.object({ organization_id: z.uuid(), role: z.enum(['admin', 'member']) })
-const departmentRoleSchema = z.object({ department_id: z.uuid(), role: z.enum(['manager', 'editor', 'viewer']) })
+const organizationRowSchema = z.object({ id: z.uuid(), name: z.string() })
+const organizationRoleSchema = z.object({
+  organization_id: z.uuid(),
+  role: z.enum(['admin', 'member']),
+  payment_role: z.enum(['manager', 'viewer']).nullable(),
+})
 
-export type Department = { id: string; organizationId: string; name: string; canEdit: boolean; canDelete: boolean }
-export type PaymentWorkspace = { userId: string; departments: Department[]; payments: Payment[] }
+export type PaymentOrganization = { id: string; name: string; canEdit: boolean }
+export type PaymentWorkspace = { userId: string; organizations: PaymentOrganization[]; payments: Payment[] }
 export type Failure = 'conflict' | 'forbidden' | 'invalid' | 'incomplete' | 'unavailable'
 export type Result<T> = { ok: true; value: T } | { ok: false; reason: Failure }
 
@@ -46,7 +48,6 @@ function toPayment(row: unknown): Payment | null {
   const payment = paymentSchema.safeParse({
     id: value.id,
     organizationId: value.organization_id,
-    departmentId: value.department_id,
     detail: value.detail,
     type: value.payment_type,
     amount: value.amount,
@@ -86,42 +87,33 @@ export async function loadPaymentWorkspace(client: SupabaseClient): Promise<Resu
     if (sessionError || !session) return failure('forbidden')
     const userId = session.user.id
 
-    const [departments, organizationRoles, departmentRoles, payments] = await Promise.all([
-      client.from('departments').select('id, organization_id, name').order('name'),
-      client.from('organization_memberships').select('organization_id, role').eq('user_id', userId).eq('active', true),
-      client.from('department_memberships').select('department_id, role').eq('user_id', userId),
+    const [organizations, organizationRoles, payments] = await Promise.all([
+      client.from('organizations').select('id, name').order('name'),
+      client.from('organization_memberships').select('organization_id, role, payment_role').eq('user_id', userId).eq('active', true),
       client.from('payments').select(columns, { count: 'exact' }).order('created_at', { ascending: false }),
     ])
-    const error = departments.error ?? organizationRoles.error ?? departmentRoles.error ?? payments.error
+    const error = organizations.error ?? organizationRoles.error ?? payments.error
     if (error) return failure(classify(error))
 
-    const parsedDepartments = z.array(departmentRowSchema).safeParse(departments.data)
+    const parsedOrganizations = z.array(organizationRowSchema).safeParse(organizations.data)
     const parsedOrganizationRoles = z.array(organizationRoleSchema).safeParse(organizationRoles.data)
-    const parsedDepartmentRoles = z.array(departmentRoleSchema).safeParse(departmentRoles.data)
     const parsedPayments = toPayments(payments.data ?? [])
-    if (!parsedDepartments.success || !parsedOrganizationRoles.success || !parsedDepartmentRoles.success || !parsedPayments) {
+    if (!parsedOrganizations.success || !parsedOrganizationRoles.success || !parsedPayments) {
       return failure('unavailable')
     }
     // Never show partial totals if the API row limit truncated the result.
     if (payments.count !== parsedPayments.length) return failure('incomplete')
 
-    const adminOrganizations = new Set(parsedOrganizationRoles.data.filter(({ role }) => role === 'admin').map(({ organization_id }) => organization_id))
-    const roles = new Map(parsedDepartmentRoles.data.map(({ department_id, role }) => [department_id, role]))
+    const roles = new Map(parsedOrganizationRoles.data.map((membership) => [membership.organization_id, membership]))
     return {
       ok: true,
       value: {
         userId,
         payments: parsedPayments,
-        departments: parsedDepartments.data.map(({ id, organization_id, name }) => {
-          const admin = adminOrganizations.has(organization_id)
-          const role = roles.get(id)
-          return {
-            id,
-            organizationId: organization_id,
-            name,
-            canEdit: admin || role === 'manager' || role === 'editor',
-            canDelete: admin || role === 'manager',
-          }
+        organizations: parsedOrganizations.data.flatMap(({ id, name }) => {
+          const membership = roles.get(id)
+          if (!membership || (membership.role !== 'admin' && !membership.payment_role)) return []
+          return [{ id, name, canEdit: membership.role === 'admin' || membership.payment_role === 'manager' }]
         }),
       },
     }
@@ -130,10 +122,10 @@ export async function loadPaymentWorkspace(client: SupabaseClient): Promise<Resu
   }
 }
 
-export async function createPayment(client: SupabaseClient, input: PaymentInput, organizationId: string): Promise<Result<Payment>> {
+export async function createPayment(client: SupabaseClient, input: PaymentInput): Promise<Result<Payment>> {
   try {
     const { data, error } = await client.from('payments')
-      .insert({ organization_id: organizationId, department_id: input.departmentId, ...editableFields(input) })
+      .insert({ organization_id: input.organizationId, ...editableFields(input) })
       .select(columns)
       .single()
     if (error) return failure(classify(error))

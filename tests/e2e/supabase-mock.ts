@@ -4,7 +4,6 @@ import { expect } from '@playwright/test'
 // In-memory stand-in for Supabase Auth and PostgREST. No request leaves the browser.
 const userId = '00000000-0000-4000-8000-000000000001'
 const organizationId = '00000000-0000-4000-8000-000000000011'
-const departmentId = '00000000-0000-4000-8000-000000000021'
 
 type Row = Record<string, unknown> & { id: string; revision: number }
 
@@ -44,13 +43,12 @@ export async function mockSupabase(context: BrowserContext) {
     const table = url.pathname.split('/').pop()
     const method = request.method()
 
-    if (method === 'GET' && table === 'departments') {
-      return route.fulfill({ json: [{ id: departmentId, organization_id: organizationId, name: 'Finans' }] })
+    if (method === 'GET' && table === 'organizations') {
+      return route.fulfill({ json: [{ id: organizationId, name: 'Şirket' }] })
     }
     if (method === 'GET' && table === 'organization_memberships') {
-      return route.fulfill({ json: [{ organization_id: organizationId, role: 'admin' }] })
+      return route.fulfill({ json: [{ organization_id: organizationId, role: 'admin', payment_role: null }] })
     }
-    if (method === 'GET' && table === 'department_memberships') return route.fulfill({ json: [] })
     if (table !== 'payments') return route.fulfill({ status: 404, json: {} })
 
     const conditions = filters(url)

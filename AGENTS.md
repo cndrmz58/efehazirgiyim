@@ -12,9 +12,10 @@ a manual payment table, stored in Supabase behind login, with a per-currency
 overview. The former browser-local test mode was removed at the owner's request.
 
 The Supabase foundation includes browser auth flows and versioned PostgreSQL
-RLS migrations for organization/department access and department-scoped,
-audited payments. Production activation (applying migrations, memberships)
-is an owner step. Private Supabase Storage is not implemented.
+RLS migrations for organization/department access and organization-scoped,
+audited payments. The owner applied the organization-wide payment migration
+and role assignments; the matching frontend deployment and production flow
+verification remain necessary. Private Supabase Storage is not implemented.
 Do not treat the frontend foundation as a production-ready financial system.
 
 GitHub Copilot and collaborating agents should read this guide before planning
@@ -167,7 +168,9 @@ financial workflow, not only its UI:
   frontend routes, controls, or client state. Enable and test RLS for every
   exposed sensitive table and private storage object when those resources are
   introduced.
-- Scope access to the correct organization and department on reads and writes.
+- Scope access to the correct organization and, where applicable, department
+  on reads and writes. Payments are organization-scoped as documented in
+  `database.md`; they require an explicit payment role or organization admin.
   Include `WITH CHECK`-equivalent enforcement for writes and validate target
   identifiers against the caller's permissions.
 - Never expose or commit Supabase `service_role`/secret keys, database

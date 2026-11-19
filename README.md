@@ -4,16 +4,15 @@ Private payment and collection management for EFE HAZIR GIYIM.
 
 - Company website: https://www.efehazirgiyim.com
 - Planned application address: https://app.efehazirgiyim.com
-- Status: **Supabase-backed payment table behind login; browser test mode removed. Production database migrations, memberships, SMTP, and Vercel DNS/deployment are pending owner action**.
+- Status: **Supabase-backed payment table behind login; organization-wide payment access is applied to the production database, with frontend deployment and flow verification pending.**
 
 The Supabase foundation adds invite-based login, password recovery, and
 versioned RLS migrations for organizations, departments, and payments.
 Production Auth has public signup and anonymous sign-ins disabled,
 email/password login enabled, a 12-character minimum password, and the
-production app/callback URLs. Three Auth users exist, but organization and
-department memberships are not assigned. SMTP/email templates, document
-uploads, and Vercel DNS/deployment remain pending. The former browser-only test
-mode has been removed; leftover browser test records are deleted on the next
+production app/callback URLs. Three Auth users and an initial administrator
+exist. SMTP/email templates and document uploads remain pending. The former
+browser-only test mode has been removed; leftover browser test records are deleted on the next
 app load and are never imported. No sample records are presented as company data.
 
 ## Current agreed delivery: a simple manually filled table
@@ -43,7 +42,7 @@ other entries, including **Ayarlar**, are visible but disabled.
 ### Using the payment table
 
 1. Sign in at `/giris`. Without a session the workspace is not shown.
-2. Select **Ödeme Ekle**, choose a department, and enter details, type,
+2. Select **Ödeme Ekle** and enter details, type,
    positive amount, currency, status, and optional notes.
 3. Use a comma or period for decimals without thousands separators, for example
    `1250,50` or `1250.50`. Up to 12 whole and 2 decimal digits are supported.
@@ -54,11 +53,12 @@ other entries, including **Ayarlar**, are visible but disabled.
    paid and unpaid record counts, the count by payment type, and each
    currency's amounts, paid percentage, and latest actual payment date.
 
-Records are stored in `public.payments` and scoped by organization and
-department (see [database.md](./database.md)). Department **viewers** read,
-**editors** also create/edit, **managers** and organization **admins** can
-also delete. The UI hides unavailable actions, but PostgreSQL RLS enforces
-them. Every insert, update, and delete is written to an append-only audit table.
+Records are stored in `public.payments` and scoped by organization
+(see [database.md](./database.md)). An explicitly assigned payment **viewer**
+can read; a payment **manager** and an organization **admin** can also
+create, edit, and delete. Department membership alone grants no payment access.
+The UI hides unavailable actions, but PostgreSQL RLS enforces them. Every
+insert, update, and delete is written to an append-only audit table.
 
 Amounts travel as decimal strings (`amount::text` on read) and are aggregated
 as integer minor units with `bigint`; currency totals are never mixed or
@@ -81,7 +81,7 @@ The manual table above takes precedence. Before database implementation, map
 these fields explicitly, including manual payment status, optional due date,
 and nullable actual date for unpaid records; do not silently substitute
 derived ledger status.
-Keep organization/department isolation, invitation-only access, decimal money,
+Keep organization isolation, invitation-only access, decimal money,
 and auditing as foundational requirements even for the simpler table.
 
 ## 1. Wider platform product scope (future roadmap)
@@ -267,7 +267,7 @@ must respect the narrowed manual-table scope above; partial settlements and
 additional modules require renewed confirmation rather than automatic rollout.
 
 The owner subsequently approved removing the browser-local test mode and
-connecting the manual payment table to Supabase with department-scoped RLS,
+connecting the manual payment table to Supabase with organization-scoped RLS,
 revision-based conflict detection, and an append-only audit trail. Partial
 settlements, reversals, and the other milestone 3 items remain out of scope.
 
@@ -372,8 +372,9 @@ the deployed browser. Reassess the advisory before production release.
 
 Hosted Auth's core production settings are configured. See
 [database.md](./database.md#supabase-production-activation-partially-applied)
-for the remaining Auth email, user provisioning, and database migration steps.
-The production database migrations have not been deployed.
+for the remaining Auth email and production verification steps.
+The owner applied the migrations and explicit payment role assignments manually.
+The matching frontend must be deployed and verified against production.
 
 ## 11. Vercel deployment and custom domain
 
@@ -381,8 +382,7 @@ The repository is linked to the `efe-financial-operations` Vercel project,
 configured for Vite, `npm run build`, `dist`, and Node 24.x. Production
 Supabase environment variables are set. The exact Supabase project origin is
 allowlisted in the Content Security Policy; do not broaden it to arbitrary
-hosts. The app domain is attached to the project, but its DNS record is not
-configured and no deployment has been made.
+hosts. The app domain is attached to the project and has served the application.
 
 1. Keep the GitHub repository connected to Vercel.
 2. Verify the configured SPA rewrites on direct links and future Auth callbacks;

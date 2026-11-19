@@ -12,7 +12,7 @@ const amountSchema = z.string().trim()
 const optionalDate = z.union([z.literal(''), z.iso.date('Geçerli bir tarih girin.')])
 
 const paymentFields = z.object({
-  departmentId: z.uuid('Departman seçin.'),
+  organizationId: z.uuid('Şirket seçin.'),
   detail: z.string().trim().min(1, 'Ödeme detayını girin.').max(200, 'En fazla 200 karakter girin.'),
   type: z.enum(['tax', 'credit', 'invoice', 'salary', 'insurance', 'rent', 'other']),
   amount: amountSchema,
@@ -35,7 +35,6 @@ const checkPaymentDate = (payment: z.infer<typeof paymentFields>, context: z.Ref
 export const paymentInputSchema = paymentFields.superRefine(checkPaymentDate)
 export const paymentSchema = paymentFields.extend({
   id: z.uuid(),
-  organizationId: z.uuid(),
   createdAt: z.iso.datetime({ offset: true }),
   updatedAt: z.iso.datetime({ offset: true }),
   revision: z.number().int().positive(),

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { paymentInputSchema, type Payment, type PaymentInput } from './payment-model'
 import {
   createPayment, deletePayment as removePayment, loadPaymentWorkspace, updatePayment,
-  type Department, type Failure,
+  type PaymentOrganization, type Failure,
 } from './payment-repository'
 import { PaymentContext, type PaymentStoreStatus } from './payment-store'
 
@@ -19,11 +19,11 @@ type State = {
   status: PaymentStoreStatus
   userId: string | null
   payments: Payment[]
-  departments: Department[]
+  organizations: PaymentOrganization[]
   error: string | null
 }
 
-const emptyState = (status: PaymentStoreStatus): State => ({ status, userId: null, payments: [], departments: [], error: null })
+const emptyState = (status: PaymentStoreStatus): State => ({ status, userId: null, payments: [], organizations: [], error: null })
 
 export function PaymentsProvider({ client, children }: { client: SupabaseClient | null; children: ReactNode }) {
   const [state, setState] = useState<State>(() => emptyState(client ? 'loading' : 'unconfigured'))
@@ -83,13 +83,13 @@ export function PaymentsProvider({ client, children }: { client: SupabaseClient 
     if (!client || busy) return false
     const parsed = paymentInputSchema.safeParse(input)
     if (!parsed.success) return fail('invalid')
-    const department = state.departments.find(({ id }) => id === (original?.departmentId ?? parsed.data.departmentId))
-    if (!department?.canEdit) return fail('forbidden')
+    const organization = state.organizations.find(({ id }) => id === (original?.organizationId ?? parsed.data.organizationId))
+    if (!organization?.canEdit || (original && parsed.data.organizationId !== original.organizationId)) return fail('forbidden')
 
     setBusy(true)
     const result = original
       ? await updatePayment(client, original, parsed.data)
-      : await createPayment(client, parsed.data, department.organizationId)
+      : await createPayment(client, parsed.data)
     setBusy(false)
     if (!result.ok) return fail(result.reason)
 
@@ -119,8 +119,8 @@ export function PaymentsProvider({ client, children }: { client: SupabaseClient 
     <PaymentContext.Provider value={{
       status: state.status,
       payments: state.payments,
-      departments: state.departments,
-      canEdit: state.departments.some(({ canEdit }) => canEdit),
+      organizations: state.organizations,
+      canEdit: state.organizations.some(({ canEdit }) => canEdit),
       busy,
       error: state.error ?? actionError,
       feedback,

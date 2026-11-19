@@ -14,7 +14,7 @@ export function OverviewPage() {
   return (
     <>
       <header className="page-heading">
-        <div><p className="eyebrow">ÖDEME KAYITLARINA GÖRE</p><h1>Genel Bakış</h1><p className="page-description">Erişiminiz olan departmanlardaki elle girilmiş ödeme kayıtlarının özeti. Banka bakiyesi değildir.</p></div>
+        <div><p className="eyebrow">ÖDEME KAYITLARINA GÖRE</p><h1>Genel Bakış</h1><p className="page-description">Erişiminiz olan şirketlerdeki elle girilmiş ödeme kayıtlarının özeti. Banka bakiyesi değildir.</p></div>
         <Link className="button-secondary" to="/payments">Ödeme tablosuna git</Link>
       </header>
       {store.status === 'unconfigured' ? (

@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { filterPayments, formatMoney, paymentInputSchema, paymentSchema, summarizePayments } from './payment-model'
 
-const draft = { departmentId: '00000000-0000-4000-8000-000000000021', detail: 'Örnek test', type: 'invoice', amount: '0,10', currency: 'TRY', paidOn: '', notes: '', status: 'unpaid' }
+const draft = { organizationId: '00000000-0000-4000-8000-000000000011', detail: 'Örnek test', type: 'invoice', amount: '0,10', currency: 'TRY', paidOn: '', notes: '', status: 'unpaid' }
 
 function payment(overrides: Record<string, unknown> = {}) {
   return paymentSchema.parse({
-    ...draft, id: crypto.randomUUID(), organizationId: '00000000-0000-4000-8000-000000000011', createdAt: '2026-11-18T12:00:00Z', updatedAt: '2026-11-18T12:00:00Z', revision: 1, ...overrides,
+    ...draft, id: crypto.randomUUID(), createdAt: '2026-11-18T12:00:00Z', updatedAt: '2026-11-18T12:00:00Z', revision: 1, ...overrides,
   })
 }
 

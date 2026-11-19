@@ -1,13 +1,13 @@
 import { createContext, useContext } from 'react'
 import type { Payment, PaymentInput } from './payment-model'
-import type { Department } from './payment-repository'
+import type { PaymentOrganization } from './payment-repository'
 
 export type PaymentStoreStatus = 'unconfigured' | 'loading' | 'ready' | 'error'
 
 export type PaymentStore = {
   status: PaymentStoreStatus
   payments: readonly Payment[]
-  departments: readonly Department[]
+  organizations: readonly PaymentOrganization[]
   canEdit: boolean
   busy: boolean
   error: string | null

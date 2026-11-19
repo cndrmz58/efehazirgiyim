@@ -3,21 +3,21 @@ import { z } from 'zod'
 import { currencies, defaultCurrency } from '../../lib/currencies'
 import { tr } from '../../locales/tr'
 import { paymentInputSchema, type Payment, type PaymentInput } from './payment-model'
-import type { Department } from './payment-repository'
+import type { PaymentOrganization } from './payment-repository'
 
-type FormValues = { departmentId: string; detail: string; type: string; amount: string; currency: string; dueOn: string; paidOn: string; notes: string; status: string }
+type FormValues = { organizationId: string; detail: string; type: string; amount: string; currency: string; dueOn: string; paidOn: string; notes: string; status: string }
 type FormErrors = Partial<Record<keyof FormValues, string[]>>
 
-export function PaymentForm({ original, departments, busy, onSave, onCancel }: {
+export function PaymentForm({ original, organizations, busy, onSave, onCancel }: {
   original: Payment | null
-  departments: readonly Department[]
+  organizations: readonly PaymentOrganization[]
   busy: boolean
   onSave: (input: PaymentInput) => void
   onCancel: () => void
 }) {
-  const choices = original ? departments.filter(({ id }) => id === original.departmentId) : departments.filter(({ canEdit }) => canEdit)
+  const choices = original ? organizations.filter(({ id }) => id === original.organizationId) : organizations.filter(({ canEdit }) => canEdit)
   const [values, setValues] = useState<FormValues>(original ?? {
-    departmentId: choices.length === 1 ? choices[0]?.id ?? '' : '',
+    organizationId: choices.length === 1 ? choices[0]?.id ?? '' : '',
     detail: '', type: 'invoice', amount: '', currency: defaultCurrency, dueOn: '', paidOn: '', notes: '', status: 'unpaid',
   })
   const [errors, setErrors] = useState<FormErrors>({})
@@ -58,14 +58,13 @@ export function PaymentForm({ original, departments, busy, onSave, onCancel }: {
       }}>
         {Object.keys(errors).length > 0 && <p role="alert" className="form-error">Kaydedilemedi. İşaretli alanları kontrol edin.</p>}
         <div className="payment-form-grid">
-          <label className="form-field form-wide" htmlFor="payment-departmentId">Departman
-            <select {...field('departmentId')} disabled={Boolean(original)} required>
-              {!original && choices.length !== 1 && <option value="">Departman seçin</option>}
+          {!original && choices.length > 1 && <label className="form-field form-wide" htmlFor="payment-organizationId">Şirket
+            <select {...field('organizationId')} required>
+              <option value="">Şirket seçin</option>
               {choices.map(({ id, name }) => <option key={id} value={id}>{name}</option>)}
             </select>
-            {original && <span className="field-help">Kaydın departmanı değiştirilemez.</span>}
-            {error('departmentId')}
-          </label>
+            {error('organizationId')}
+          </label>}
           <label className="form-field form-wide" htmlFor="payment-detail">Ödeme detayı
             <input ref={detailInput} {...field('detail')} maxLength={200} required />
             {error('detail')}

@@ -21,7 +21,7 @@ export function PaymentsPage() {
   const [currency, setCurrency] = useState<string>(defaultCurrency)
   const filtered = Boolean(query || type || status || currency !== defaultCurrency)
   const payments = store.payments
-  const departments = new Map(store.departments.map((department) => [department.id, department]))
+  const organizations = new Map(store.organizations.map((organization) => [organization.id, organization]))
   const ready = store.status === 'ready'
   const visible = filterPayments(payments, { query, type, status, currency })
 
@@ -41,22 +41,22 @@ export function PaymentsPage() {
   }
 
   function actions(payment: Payment) {
-    const department = departments.get(payment.departmentId)
-    if (!department?.canEdit && !department?.canDelete) return null
+    const organization = organizations.get(payment.organizationId)
+    if (!organization?.canEdit) return null
     return (
       <div className="row-actions">
-        {department.canEdit && <button type="button" className="button-text" disabled={store.busy} aria-label={`Ödemeyi düzenle: ${payment.detail}`} onClick={() => setEditor(payment)}>Düzenle</button>}
-        {department.canDelete && <button type="button" className="button-text danger-text" disabled={store.busy} aria-label={`Ödemeyi sil: ${payment.detail}`} onClick={async () => {
+        <button type="button" className="button-text" disabled={store.busy} aria-label={`Ödemeyi düzenle: ${payment.detail}`} onClick={() => setEditor(payment)}>Düzenle</button>
+        <button type="button" className="button-text danger-text" disabled={store.busy} aria-label={`Ödemeyi sil: ${payment.detail}`} onClick={async () => {
           if (window.confirm(`“${payment.detail}” ödemesi silinsin mi? Silme işlemi denetim geçmişine kaydedilir.`) && await store.deletePayment(payment)) {
             if (editor !== 'new' && editor?.id === payment.id) setEditor(null)
           }
-        }}>Sil</button>}
+        }}>Sil</button>
       </div>
     )
   }
 
-  function departmentName(payment: Payment) {
-    return store.departments.length > 1 && <span className="field-help">{departments.get(payment.departmentId)?.name ?? '—'}</span>
+  function organizationName(payment: Payment) {
+    return store.organizations.length > 1 && <span className="field-help">{organizations.get(payment.organizationId)?.name ?? '—'}</span>
   }
 
   return (
@@ -79,7 +79,7 @@ export function PaymentsPage() {
       {store.feedback && <p className="action-feedback" role="status">{store.feedback}</p>}
 
       {editor !== null && (ready || store.status === 'loading') && (
-        <PaymentForm key={editor === 'new' ? 'new' : editor.id} original={editor === 'new' ? null : editor} departments={store.departments} busy={store.busy} onSave={save} onCancel={() => setEditor(null)} />
+        <PaymentForm key={editor === 'new' ? 'new' : editor.id} original={editor === 'new' ? null : editor} organizations={store.organizations} busy={store.busy} onSave={save} onCancel={() => setEditor(null)} />
       )}
 
       {store.status === 'unconfigured' ? (
@@ -147,7 +147,7 @@ export function PaymentsPage() {
             <tbody>
               {visible.map((payment) => (
                 <tr key={payment.id} className="payment-row">
-                  <td><strong>{payment.detail}</strong>{departmentName(payment)}{actions(payment)}</td>
+                  <td><strong>{payment.detail}</strong>{organizationName(payment)}{actions(payment)}</td>
                   <td>{labels.types[payment.type]}</td>
                   <td className="amount-cell">{formatMoney(toMinorUnits(payment.amount), payment.currency)}</td>
                   <td>{displayDate(payment.dueOn)}</td>
@@ -161,7 +161,7 @@ export function PaymentsPage() {
                   <div className="empty-state" aria-live="polite">
                     <span className="empty-icon"><Table2 size={28} aria-hidden="true" /></span>
                     <h3>{filtered || payments.length > 0 ? 'Filtrelere uygun kayıt bulunamadı' : 'Henüz ödeme kaydı yok'}</h3>
-                    <p>{store.canEdit ? 'Ödeme Ekle düğmesiyle ilk kaydı oluşturabilirsiniz.' : store.departments.length === 0 ? 'Hesabınıza henüz departman atanmamış. Yöneticinize başvurun.' : 'Bu departmanlarda kayıt ekleme yetkiniz yok.'}</p>
+                    <p>{store.canEdit ? 'Ödeme Ekle düğmesiyle ilk kaydı oluşturabilirsiniz.' : store.organizations.length === 0 ? 'Hesabınıza ödeme erişimi atanmamış. Yöneticinize başvurun.' : 'Ödeme kaydı ekleme yetkiniz yok.'}</p>
                   </div>
                 </td>
               </tr>}
@@ -172,7 +172,7 @@ export function PaymentsPage() {
           <div className="payment-mobile-list" aria-label="Mobil ödeme listesi">
             {visible.map((payment) => (
               <article className="payment-mobile-card" key={payment.id}>
-                <div className="mobile-card-heading"><h3>{payment.detail}{departmentName(payment)}</h3><span className={`payment-status status-${payment.status}`}>{labels.statuses[payment.status]}</span></div>
+                <div className="mobile-card-heading"><h3>{payment.detail}{organizationName(payment)}</h3><span className={`payment-status status-${payment.status}`}>{labels.statuses[payment.status]}</span></div>
                 <p className="mobile-amount">{formatMoney(toMinorUnits(payment.amount), payment.currency)}</p>
                 <dl>
                   <div><dt>Ödeme türü</dt><dd>{labels.types[payment.type]}</dd></div>

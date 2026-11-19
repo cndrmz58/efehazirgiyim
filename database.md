@@ -19,15 +19,17 @@ already-applied migration. SQL regression tests live in
 - [Payment access](./supabase/migrations/20261119110000_payment_access.sql):
   adds server-owned revision/actor metadata, department-scoped RLS for the
   payment screen, and the append-only `public.payment_audit` table.
-- None of these migrations have been applied to production yet. The owner
-  applies them manually in the Supabase SQL Editor (see below). The browser
-  test mode was removed; its records are never imported.
+- [Organization payment access](./supabase/migrations/20261119120000_organization_payment_access.sql):
+  switches only payments to explicitly assigned organization-wide roles.
+  The owner applied the migrations and individual role assignments manually;
+  the matching frontend deployment and production flow verification remain.
+  The browser test mode was removed; its records are never imported.
 
 ## Manual payments (`public.payments`)
 
 | Columns | Contract |
 | --- | --- |
-| `id`, `organization_id`, `department_id` | UUID record ID and required scope. A composite foreign key requires the department to belong to the same organization. |
+| `id`, `organization_id`, `department_id` | UUID record ID and required organization scope. Historical department IDs remain unchanged; new payments have a null department. If present, the composite foreign key requires the department to belong to the same organization. |
 | `detail`, `notes` | Nonblank detail, up to 200 characters; optional notes, up to 2,000 characters. |
 | `payment_type` | `tax`, `credit`, `invoice`, `salary`, `insurance`, `rent`, or `other`. |
 | `amount`, `currency` | Positive exact `numeric` less than `1000000000000` with at most two fractional digits; `TRY` by default, with `EUR` and `USD` also supported. A check rejects excess precision without silently rounding it. |
@@ -39,16 +41,18 @@ already-applied migration. SQL regression tests live in
 
 | Role | Read | Insert / update | Delete |
 | --- | --- | --- | --- |
-| Active organization `admin` | All departments in the organization | Yes | Yes |
-| Department `manager` (active member) | Assigned department | Yes | Yes |
-| Department `editor` (active member) | Assigned department | Yes | No |
-| Department `viewer` (active member) | Assigned department | No | No |
-| Others, `anon`, `service_role` | No | No | No |
+| Active organization `admin` | All organization payments | Yes | Yes |
+| Active member with payment role `manager` | All organization payments | Yes | Yes |
+| Active member with payment role `viewer` | All organization payments | No | No |
+| Other members, `anon`, `service_role` | No | No | No |
 
-- `authenticated` may insert only `organization_id`, `department_id`, and the
-  editable business columns; it may update only the business columns. Record
-  ID, scope, and metadata cannot be chosen or changed by clients, and a trigger
-  rejects scope changes even for privileged sessions.
+- The nullable `payment_role` is explicitly assigned by a trusted operator.
+  A regular membership or department role alone grants no payment access.
+  Organization/department membership policies for other features are unchanged.
+- `authenticated` may insert only `organization_id` and editable business
+  columns; new payments cannot specify a department. It may update only business
+  columns. Record ID, organization, historical department and metadata cannot
+  be changed by clients. Existing records and audit rows are not rewritten.
 - Clients update/delete with `id = … and revision = <seen revision>`. Zero
   affected rows means the record changed, was deleted, or is not permitted; the
   UI reports a conflict and reloads. Row locks make concurrent edits of the
@@ -119,14 +123,18 @@ transaction, and record each version in `supabase_migrations.schema_migrations`
 so a later `supabase db push` does not try to reapply them. Never run
 `supabase/tests/*.sql` against production. If `ENABLE_DATABASE_DEPLOYMENTS`
 is later enabled, first confirm the recorded history matches the files.
+The organization-wide migration and the new frontend are incompatible with
+the old frontend/schema respectively: coordinate a short maintenance window,
+apply the migration and reviewed role assignments, then deploy the frontend.
+Verify both before reopening access; do not enter sample financial data in production.
 
 ## Supabase production activation (partially applied)
 
 1. This repository has no staging project. The automated schema deployment
    above applies migrations directly to production after local SQL checks;
    enable backups and review the production recovery plan before turning it
-   on. Verify that the schema-only payments migration does not expose API
-   access. Production Auth and application activation remain separate.
+   on. The owner applied the migrations manually. Production Auth and
+   application payment flows still require separate verification.
 2. The hosted `Efehazirgiyim Project` Auth core settings are applied: public
    signup and anonymous sign-ins are disabled, email/password login remains
    enabled, minimum password length is 12, the Site URL is
@@ -141,22 +149,21 @@ is later enabled, first confirm the recorded history matches the files.
    not verified. The fragment keeps the one-time token out of HTTP request
    URLs; the app consumes it only after the user submits a new password.
 4. Three Auth user records have been created directly in the Supabase
-   Dashboard. Verify each identity and its organization/department assignment
+   Dashboard. Verify each identity and its organization/payment role
    before granting membership. The user accounts alone grant no database
    membership; do not share passwords.
 5. The Vercel Production environment now has the three public `VITE_` values
    from [local development](./README.md#9-local-development). The exact
    production Supabase origin is in the `connect-src` allowlist in
    `vercel.json`. Never put database credentials or secret keys in these
-   variables. The Vercel project and app domain are configured, but its DNS
-   CNAME is not set and no deployment has been made.
-6. A trusted database operator can create the organization, departments, and
-   active membership in one transaction (see below), after the identity
-   migration is safely deployed. Users without an active membership have no
-   business-data access. The application cannot change memberships, including
-   for administrators.
+   variables. The Vercel project and app domain have served the application.
+6. The owner created the organization, departments, initial administrator, and
+   payment role assignments. Users without an active membership and an explicit
+   payment role (or admin role) have no payment access. The application cannot
+   change memberships.
 
-Operator example for an empty target, to adapt and review before execution:
+Historical operator example for an empty target only; do not rerun it on the
+existing organization:
 
 ```sql
 begin;
