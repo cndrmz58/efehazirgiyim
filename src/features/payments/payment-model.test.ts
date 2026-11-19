@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { filterPayments, formatMoney, paymentInputSchema, paymentSchema, summarizePayments } from './payment-model'
+import { filterPayments, formatMoney, paymentInputSchema, paymentSchema, summarizePaidByPeriod, summarizePayments } from './payment-model'
 
-const draft = { organizationId: '00000000-0000-4000-8000-000000000011', detail: 'Örnek test', type: 'invoice', paymentMethod: 'bank', amount: '0,10', currency: 'TRY', paidOn: '', notes: '', status: 'unpaid' }
+const draft = { organizationId: '00000000-0000-4000-8000-000000000011', detail: 'Örnek test', type: 'invoice', paymentMethod: 'bank', amount: '0,10', remainingAmount: '0,10', currency: 'TRY', paidOn: '', notes: '', status: 'unpaid' }
 
 function payment(overrides: Record<string, unknown> = {}) {
+  const amount = overrides.amount ?? draft.amount
+  const status = overrides.status ?? draft.status
   return paymentSchema.parse({
-    ...draft, id: crypto.randomUUID(), createdAt: '2026-11-18T12:00:00Z', updatedAt: '2026-11-18T12:00:00Z', revision: 1, ...overrides,
+    ...draft,
+    amount,
+    remainingAmount: overrides.remainingAmount ?? (status === 'paid' ? '0.00' : amount),
+    id: crypto.randomUUID(), createdAt: '2026-11-18T12:00:00Z', updatedAt: '2026-11-18T12:00:00Z', revision: 1, ...overrides,
   })
 }
 
@@ -27,7 +32,16 @@ describe('ödeme doğrulaması ve özetleri', () => {
     expect(paymentInputSchema.safeParse({ ...draft, status: 'paid' }).success).toBe(false)
     expect(paymentInputSchema.safeParse({ ...draft, paidOn: '2026-11-18' }).success).toBe(false)
     expect(paymentInputSchema.safeParse({ ...draft, status: 'paid', paidOn: '2026-02-30' }).success).toBe(false)
-    expect(paymentInputSchema.safeParse({ ...draft, status: 'paid', paidOn: '2026-11-18' }).success).toBe(true)
+    expect(paymentInputSchema.safeParse({ ...draft, remainingAmount: '0', status: 'paid', paidOn: '2026-11-18' }).success).toBe(true)
+  })
+
+  it('kalan tutarı toplamla sınırlar ve kısmi durumu yalnızca pozitif ara bakiyede kabul eder', () => {
+    expect(paymentInputSchema.safeParse({ ...draft, amount: '100', remainingAmount: '20', status: 'partially_paid' }).success).toBe(true)
+    expect(paymentInputSchema.safeParse({ ...draft, amount: '100', remainingAmount: '0', status: 'partially_paid' }).success).toBe(false)
+    expect(paymentInputSchema.safeParse({ ...draft, amount: '100', remainingAmount: '101' }).success).toBe(false)
+    expect(paymentInputSchema.safeParse({ ...draft, amount: '100', remainingAmount: '0' }).success).toBe(true)
+    expect(paymentInputSchema.safeParse({ ...draft, amount: '100', remainingAmount: '1', status: 'paid', paidOn: '2026-11-18' }).success).toBe(false)
+    expect(paymentInputSchema.safeParse({ ...draft, amount: '100', remainingAmount: '0', status: 'paid', paidOn: '2026-11-18' }).success).toBe(true)
   })
 
   it('eski kayıtları vadesiz açar ve girilen vadeyi durumdan bağımsız doğrular', () => {
@@ -82,5 +96,48 @@ describe('ödeme doğrulaması ve özetleri', () => {
     expect(trySummary).toMatchObject({ paidCount: 2, paidRatio: 0.333, latestPaidOn: '2026-11-18' })
     expect(eurSummary).toMatchObject({ paidCount: 0, paidRatio: 0, latestPaidOn: null })
     expect(usdSummary).toMatchObject({ paidCount: 0, paidRatio: null, latestPaidOn: null })
+  })
+
+  it('kısmi ödemelerde ödenen ve kalan tutarları bakiyeden hesaplar, durum sayılarını ayrı tutar', () => {
+    const partial = payment({
+      amount: '100',
+      remainingAmount: '20',
+      status: 'partially_paid',
+      paidOn: '2026-11-18',
+    })
+    const [trySummary] = summarizePayments([partial])
+
+    expect(trySummary).toMatchObject({
+      total: 10000n,
+      paid: 8000n,
+      unpaid: 2000n,
+      paidCount: 0,
+      partiallyPaidCount: 1,
+      unpaidCount: 0,
+      paidRatio: 0.8,
+      latestPaidOn: '2026-11-18',
+    })
+  })
+
+  it('ödenen tutarı gerçekleşen tarihe göre aylık veya yıllık gruplar; dövizleri ve vadesiz ödemeleri karıştırmaz', () => {
+    const records = [
+      payment({ amount: '100', remainingAmount: '0', status: 'paid', paidOn: '2026-01-15', dueOn: '2025-12-15' }),
+      payment({ amount: '100', remainingAmount: '40', status: 'partially_paid', paidOn: '2026-01-20' }),
+      payment({ amount: '75', remainingAmount: '0', status: 'paid', paidOn: '2026-02-01' }),
+      payment({ amount: '60', remainingAmount: '0', status: 'paid', paidOn: '2025-01-01', currency: 'EUR' }),
+      payment({ amount: '50', status: 'unpaid', dueOn: '2026-01-01' }),
+    ]
+
+    expect(summarizePaidByPeriod(records, { currency: 'TRY', year: '2026', month: '' }))
+      .toEqual(Array.from({ length: 12 }, (_, index) => ({
+        period: `2026-${String(index + 1).padStart(2, '0')}`,
+        amount: index === 0 ? 16000n : index === 1 ? 7500n : 0n,
+      })))
+    expect(summarizePaidByPeriod(records, { currency: 'TRY', year: '', month: '' }))
+      .toEqual([{ period: '2026', amount: 23500n }])
+    expect(summarizePaidByPeriod(records, { currency: 'TRY', year: '', month: '01' }))
+      .toEqual([{ period: '2026', amount: 16000n }])
+    expect(summarizePaidByPeriod(records, { currency: 'EUR', year: '', month: '' }))
+      .toEqual([{ period: '2025', amount: 6000n }])
   })
 })

@@ -24,6 +24,10 @@ already-applied migration. SQL regression tests live in
   The owner applied the migrations and individual role assignments manually;
   the matching frontend deployment and production flow verification remain.
   The browser test mode was removed; its records are never imported.
+- [Payment remaining balance](./supabase/migrations/20261119143000_payment_remaining_balance.sql):
+  adds an exact remaining balance and the `partially_paid` status. Existing
+  paid records are backfilled to zero remaining; unpaid records are backfilled
+  to their full amount.
 - Payment method is stored as `check`, `cash`, or `bank`. Historical rows stay
   null because their method cannot be inferred; new rows must specify a method.
 
@@ -35,8 +39,8 @@ already-applied migration. SQL regression tests live in
 | `detail`, `notes` | Nonblank detail, up to 200 characters; optional notes, up to 2,000 characters. |
 | `payment_type` | `tax`, `credit`, `invoice`, `salary`, `insurance`, `rent`, or `other`. |
 | `payment_method` | `check`, `cash`, or `bank` for new payments. Existing rows may be null; their historical method is unknown. |
-| `amount`, `currency` | Positive exact `numeric` less than `1000000000000` with at most two fractional digits; `TRY` by default, with `EUR` and `USD` also supported. A check rejects excess precision without silently rounding it. |
-| `due_on`, `paid_on`, `status` | Optional finite due date; status is manually set to `paid` or `unpaid`. A finite actual payment date is required if paid and must be null if unpaid. The due date is independent of status. |
+| `amount`, `remaining_amount`, `currency` | Positive `amount` and `remaining_amount` from zero through `amount`, both exact `numeric` values below `1000000000000` with at most two fractional digits; `TRY` by default, with `EUR` and `USD` also supported. A check rejects excess precision without silently rounding it. New unpaid records default the remaining balance to the full amount; paid records default it to zero. |
+| `due_on`, `paid_on`, `status` | Optional finite due date; status is `paid`, `unpaid`, or `partially_paid`. A partial balance strictly between zero and the total automatically selects `partially_paid`; zero does not change status. `paid` requires zero remaining and a finite actual payment date; `unpaid` requires no actual payment date; `partially_paid` requires a positive balance below the total and its actual payment date is optional. The due date is independent of status. |
 | `created_at`, `created_by` | Set by trigger on insert to the transaction time and `auth.uid()`; never client-supplied or changed later. |
 | `revision`, `updated_at`, `updated_by` | Set by trigger: revision starts at 1 and increments on every update. |
 
@@ -58,11 +62,17 @@ already-applied migration. SQL regression tests live in
   be changed by clients. Existing records and audit rows are not rewritten.
 - New payment inserts require `payment_method`; legacy rows with a null method
   remain readable and can be assigned a method when edited.
+- Authenticated writers may insert and update `remaining_amount`; the database
+  enforces its bounds and sets `partially_paid` when a balance is strictly
+  between zero and the total. A zero balance does not automatically set
+  `paid`; status counts remain based on the manually selected status.
 - Clients update/delete with `id = … and revision = <seen revision>`. Zero
   affected rows means the record changed, was deleted, or is not permitted; the
   UI reports a conflict and reloads. Row locks make concurrent edits of the
   same revision succeed at most once.
-- Amounts are read as `amount::text` and written as decimal strings.
+- `amount` and `remaining_amount` are read as text and written as decimal
+  strings. Overview paid/unpaid amounts use the remaining balance; record
+  counts use the selected status.
 - `public.payment_audit` stores one row per insert/update/delete with the actor,
   time, and full old/new row JSON. A `security definer` trigger writes it;
   API roles have no write privileges. Only active organization admins can read it.

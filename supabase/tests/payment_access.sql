@@ -51,13 +51,14 @@ begin
   if (select count(*) from public.payments) <> 2 then
     raise exception 'Manager cannot see all organization records or sees another organization';
   end if;
-  insert into public.payments (organization_id, detail, payment_type, payment_method, amount, status)
-  values ('00000000-0000-4000-8000-000000000011', 'Invoice', 'invoice', 'bank', '1250.50', 'unpaid')
+  insert into public.payments (organization_id, detail, payment_type, payment_method, amount, remaining_amount, status)
+  values ('00000000-0000-4000-8000-000000000011', 'Invoice', 'invoice', 'bank', '1250.50', '1000.50', 'unpaid')
   returning * into created;
   perform set_config('test.payment_id', created.id::text, true);
   if created.department_id is not null or created.revision <> 1
     or created.created_by <> '00000000-0000-4000-8000-000000000001'
-    or created.amount::text <> '1250.50'
+    or created.amount::text <> '1250.50' or created.remaining_amount::text <> '1000.50'
+    or created.status <> 'partially_paid'
   then raise exception 'Insert metadata, scope or amount is wrong'; end if;
 
   begin
@@ -89,7 +90,7 @@ begin
   exception when insufficient_privilege then null;
   end;
 
-  update public.payments set status = 'paid', paid_on = date '2026-11-19'
+  update public.payments set status = 'paid', paid_on = date '2026-11-19', remaining_amount = 0
   where id = created.id and revision = 1;
   get diagnostics changed = row_count;
   if changed <> 1 or (select revision from public.payments where id = created.id) <> 2 then

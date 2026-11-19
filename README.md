@@ -26,10 +26,11 @@ Excel-like payment table rather than automated financial operations:
 | Ödeme Türü | Dropdown: Vergi, Kredi, Fatura, Maaş, Sigorta, Kira, Diğer |
 | Ödeme Şekli | Dropdown: Çek, Nakit, Banka |
 | Tutar | Decimal amount; TL (TRY) by default, EUR and USD selectable |
+| Kalan | Manually entered exact balance in the same currency |
 | Vade Tarihi | Optional, manually entered due date, independent of status |
 | Gerçekleşen Ödeme Tarihi | Actual payment date, not the due date |
 | Açıklama | Manually entered notes |
-| Durum | Dropdown: Ödendi / Ödenmedi |
+| Durum | Dropdown: Ödendi / Ödenmedi / Kısmen Ödendi |
 
 The interface supports creating, editing, and deleting payments, searchable
 and combined type/status/currency/year/month filters (year and month use the
@@ -45,16 +46,25 @@ other entries, including **Ayarlar**, are visible but disabled.
 
 1. Sign in at `/giris`. Without a session the workspace is not shown.
 2. Select **Ödeme Ekle** and enter details, type,
-   payment method (Çek, Nakit, or Banka), positive amount, currency, status,
-   and optional notes.
+   payment method (Çek, Nakit, or Banka), positive amount, remaining balance,
+   currency, status, and optional notes. The remaining balance starts at the
+   full amount for a new record.
 3. Use a comma or period for decimals without thousands separators, for example
    `1250,50` or `1250.50`. Up to 12 whole and 2 decimal digits are supported.
 4. Enter a due date if known. An **Ödendi** record requires an actual payment
-   date. Changing to **Ödenmedi** clears only the actual payment date, not
-   the due date.
-5. Edit or delete rows/cards as permitted, or open **Genel Bakış** for total,
-   paid and unpaid record counts, the count by payment type, and each
-   currency's amounts, paid percentage, and latest actual payment date.
+   date. A **Kısmen Ödendi** record may include an actual payment date.
+   Changing to **Ödenmedi** clears only the actual payment date, not the due
+   date. Entering a remaining balance strictly between zero and the total
+   automatically selects **Kısmen Ödendi**. A zero balance does not change
+   the status; it remains a manual choice.
+5. Edit or delete rows/cards as permitted, or open **Genel Bakış** for counts
+   by status, the count by payment type, and each currency's total, paid and
+   remaining amounts, paid percentage, and latest actual payment date. Amount
+   totals use the remaining balance; status counts use the selected status.
+   The paid-amount chart can be filtered by currency, year, and month, and
+   groups amounts by actual payment date. Partial amounts use the recorded
+   amount-minus-remaining difference and the record's single actual payment
+   date.
 
 Records are stored in `public.payments` and scoped by organization
 (see [database.md](./database.md)). An explicitly assigned payment **viewer**
@@ -63,9 +73,9 @@ create, edit, and delete. Department membership alone grants no payment access.
 The UI hides unavailable actions, but PostgreSQL RLS enforces them. Every
 insert, update, and delete is written to an append-only audit table.
 
-Amounts travel as decimal strings (`amount::text` on read) and are aggregated
-as integer minor units with `bigint`; currency totals are never mixed or
-converted. Edits and deletes send the record revision; if another user changed
+Amounts and remaining balances travel as decimal strings (`::text` on read) and
+are aggregated as integer minor units with `bigint`; currency totals are never
+mixed or converted. Edits and deletes send the record revision; if another user changed
 or removed the record first, nothing is saved, an explicit conflict message is
 shown, the open form keeps the user's input, and the list reloads. Load
 failures, including a server row limit truncating results, show an error
@@ -73,9 +83,11 @@ rather than partial tables or totals. There is no live push update; use
 **Yenile** to fetch other users' changes.
 
 A manually entered exchange-rate field is planned, but its location,
-persistence, and meaning are deferred by the owner. No currency conversion,
-automatic exchange-rate lookup, partial-settlement balance, or settlement automation
-is part of this initial manual-table delivery.
+persistence, and meaning are deferred by the owner. The manually entered
+remaining balance and partial status are approved additions to the initial
+manual table; they do not record individual settlements or provide settlement
+automation. No currency conversion or automatic exchange-rate lookup is part
+of this delivery.
 
 The detailed platform design below retains the original broader roadmap.
 Its partial-settlement ledger, derived statuses, due-date workflow, and

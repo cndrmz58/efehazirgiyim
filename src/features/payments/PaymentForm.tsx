@@ -6,8 +6,43 @@ import { paymentInputSchema, type Payment, type PaymentInput } from './payment-m
 import type { PaymentOrganization } from './payment-repository'
 import { TurkishDateInput } from './TurkishDateInput'
 
-type FormValues = { organizationId: string; detail: string; type: string; paymentMethod: string; amount: string; currency: string; dueOn: string; paidOn: string; notes: string; status: string }
+type FormValues = { organizationId: string; detail: string; type: string; paymentMethod: string; amount: string; remainingAmount: string; currency: string; dueOn: string; paidOn: string; notes: string; status: string }
 type FormErrors = Partial<Record<keyof FormValues, string[]>>
+
+function minorUnitsOrNull(value: string): bigint | null {
+  const normalized = value.trim().replace(',', '.')
+  if (!/^(?:0|[1-9]\d{0,11})(?:\.\d{1,2})?$/.test(normalized)) return null
+  const [whole, fraction = ''] = normalized.split('.')
+  return BigInt(`${whole}${fraction.padEnd(2, '0')}`)
+}
+
+function updateFormValues(current: FormValues, name: keyof FormValues, value: string): FormValues {
+  const next = { ...current, [name]: value }
+
+  if (name === 'status') {
+    if (value === 'unpaid') next.paidOn = ''
+    if (value === 'paid') next.remainingAmount = '0'
+  }
+
+  if (name === 'amount') {
+    const currentAmount = minorUnitsOrNull(current.amount)
+    const currentRemaining = minorUnitsOrNull(current.remainingAmount)
+    if (current.remainingAmount === '' || current.remainingAmount === current.amount ||
+      (currentAmount !== null && currentRemaining === currentAmount)) {
+      next.remainingAmount = value
+    }
+  }
+
+  if (name === 'amount' || name === 'remainingAmount') {
+    const amount = minorUnitsOrNull(next.amount)
+    const remaining = minorUnitsOrNull(next.remainingAmount)
+    if (amount !== null && remaining !== null && remaining > 0n && remaining < amount) {
+      next.status = 'partially_paid'
+    }
+  }
+
+  return next
+}
 
 export function PaymentForm({ original, organizations, busy, onSave, onCancel }: {
   original: Payment | null
@@ -19,7 +54,7 @@ export function PaymentForm({ original, organizations, busy, onSave, onCancel }:
   const choices = original ? organizations.filter(({ id }) => id === original.organizationId) : organizations.filter(({ canEdit }) => canEdit)
   const [values, setValues] = useState<FormValues>(original ? { ...original, paymentMethod: original.paymentMethod ?? '' } : {
     organizationId: choices.length === 1 ? choices[0]?.id ?? '' : '',
-    detail: '', type: 'invoice', paymentMethod: '', amount: '', currency: defaultCurrency, dueOn: '', paidOn: '', notes: '', status: 'unpaid',
+    detail: '', type: 'invoice', paymentMethod: '', amount: '', remainingAmount: '', currency: defaultCurrency, dueOn: '', paidOn: '', notes: '', status: 'unpaid',
   })
   const [errors, setErrors] = useState<FormErrors>({})
   const detailInput = useRef<HTMLInputElement>(null)
@@ -34,7 +69,7 @@ export function PaymentForm({ original, organizations, busy, onSave, onCancel }:
       'aria-describedby': errors[name] ? `payment-${name}-error` : undefined,
       onChange: (event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const value = event.target.value
-        setValues((current) => ({ ...current, [name]: value, ...(name === 'status' && value === 'unpaid' ? { paidOn: '' } : {}) }))
+        setValues((current) => updateFormValues(current, name, value))
       },
     }
   }
@@ -90,6 +125,11 @@ export function PaymentForm({ original, organizations, busy, onSave, onCancel }:
             <span className="field-help">Binlik ayırıcı kullanmayın; en fazla 2 ondalık basamak.</span>
             {error('amount')}
           </label>
+          <label className="form-field" htmlFor="payment-remainingAmount">Kalan
+            <input {...field('remainingAmount')} inputMode="decimal" placeholder="Örn. 250,00" required />
+            <span className="field-help">Yeni kayıtta tutarın tamamı kadar başlar. Sıfır, durumu otomatik değiştirmez.</span>
+            {error('remainingAmount')}
+          </label>
           <label className="form-field" htmlFor="payment-currency">Para birimi
             <select {...field('currency')}>{currencies.map(({ code, label }) => <option key={code} value={code}>{label}</option>)}</select>
             {error('currency')}
@@ -119,7 +159,7 @@ export function PaymentForm({ original, organizations, busy, onSave, onCancel }:
               {...(errors.paidOn ? { 'aria-describedby': 'payment-paidOn-error' } : {})}
               onChange={(paidOn) => setValues((current) => ({ ...current, paidOn }))}
             />
-            <span className="field-help">Ödendi seçildiğinde zorunludur. Ödenmedi kayıtlarında boş bırakılır.</span>
+            <span className="field-help">Ödendi seçildiğinde zorunludur; Kısmen Ödendi için isteğe bağlıdır. Ödenmedi kayıtlarında boş bırakılır.</span>
             {error('paidOn')}
           </label>
           <label className="form-field form-wide" htmlFor="payment-notes">Açıklama

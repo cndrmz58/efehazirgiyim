@@ -162,6 +162,7 @@ export function PaymentsPage() {
                 <th scope="col">{labels.type}</th>
                 <th scope="col">{labels.paymentMethod}</th>
                 <th scope="col" className="amount-heading">{labels.amount}</th>
+                <th scope="col" className="amount-heading">{labels.remainingAmount}</th>
                 <th scope="col">{labels.dueDate}</th>
                 <th scope="col">{labels.date}</th>
                 <th scope="col">{labels.notes}</th>
@@ -175,14 +176,15 @@ export function PaymentsPage() {
                   <td>{labels.types[payment.type]}</td>
                   <td>{payment.paymentMethod ? labels.paymentMethods[payment.paymentMethod] : 'Belirtilmedi'}</td>
                   <td className="amount-cell">{formatMoney(toMinorUnits(payment.amount), payment.currency)}</td>
+                  <td className="amount-cell">{formatMoney(toMinorUnits(payment.remainingAmount), payment.currency)}</td>
                   <td>{displayDate(payment.dueOn)}</td>
                   <td>{displayDate(payment.paidOn)}</td>
                   <td className="notes-cell">{payment.notes || '—'}</td>
-                  <td><span className={`payment-status status-${payment.status}`}>{labels.statuses[payment.status]}</span></td>
+                  <td><span className={`payment-status status-${payment.status.replace('_', '-')}`}>{labels.statuses[payment.status]}</span></td>
                 </tr>
               ))}
               {visible.length === 0 && <tr>
-                <td colSpan={8}>
+                <td colSpan={9}>
                   <div className="empty-state" aria-live="polite">
                     <span className="empty-icon"><Table2 size={28} aria-hidden="true" /></span>
                     <h3>{filtered || payments.length > 0 ? 'Filtrelere uygun kayıt bulunamadı' : 'Henüz ödeme kaydı yok'}</h3>
@@ -197,9 +199,10 @@ export function PaymentsPage() {
           <div className="payment-mobile-list" aria-label="Mobil ödeme listesi">
             {visible.map((payment) => (
               <article className="payment-mobile-card" key={payment.id}>
-                <div className="mobile-card-heading"><h3>{payment.detail}{organizationName(payment)}</h3><span className={`payment-status status-${payment.status}`}>{labels.statuses[payment.status]}</span></div>
+                <div className="mobile-card-heading"><h3>{payment.detail}{organizationName(payment)}</h3><span className={`payment-status status-${payment.status.replace('_', '-')}`}>{labels.statuses[payment.status]}</span></div>
                 <p className="mobile-amount">{formatMoney(toMinorUnits(payment.amount), payment.currency)}</p>
                 <dl>
+                  <div><dt>{labels.remainingAmount}</dt><dd>{formatMoney(toMinorUnits(payment.remainingAmount), payment.currency)}</dd></div>
                   <div><dt>Ödeme türü</dt><dd>{labels.types[payment.type]}</dd></div>
                   <div><dt>{labels.paymentMethod}</dt><dd>{payment.paymentMethod ? labels.paymentMethods[payment.paymentMethod] : 'Belirtilmedi'}</dd></div>
                   <div><dt>{labels.dueDate}</dt><dd>{displayDate(payment.dueOn)}</dd></div>

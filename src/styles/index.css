@@ -132,6 +132,7 @@ td { padding: 0; }
 .payment-status { display: inline-block; padding: 4px 8px; border-radius: 5px; font-size: 10px; font-weight: 650; white-space: nowrap; }
 .status-paid { color: #20583b; background: #e7f2e9; }
 .status-unpaid { color: #80581e; background: #fbf0d8; }
+.status-partially-paid { color: #315a79; background: #e7f1f8; }
 .payment-mobile-list { display: none; }
 .currency-summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-bottom: 24px; }
 .currency-summary { padding: 20px; }
@@ -142,12 +143,22 @@ td { padding: 0; }
 .currency-summary dt { font-size: 11px; color: #63756a; }
 .currency-summary dd { font-size: clamp(14px, 1.5vw, 22px); font-weight: 650; margin: 7px 0 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .status-summary { margin-bottom: 24px; }
-.status-summary dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.status-summary dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .paid-amount { color: #28603d; }
 .distribution-row { display: grid; grid-template-columns: 60px 1fr 70px; align-items: center; gap: 16px; margin-top: 22px; font-size: 12px; }
 .distribution-row meter { width: 100%; height: 12px; accent-color: #28583d; }
 .distribution-row strong { text-align: right; font-weight: 600; }
 .overview-empty { margin-bottom: 20px; font-size: 13px; color: #627568; line-height: 1.8; }
+.paid-trend { margin-bottom: 24px; }
+.paid-trend-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; flex-wrap: wrap; }
+.paid-trend-filters { display: flex; gap: 12px; flex-wrap: wrap; }
+.paid-trend-filters .filter-field { flex-basis: 145px; }
+.paid-trend-note { margin-top: 16px; }
+.paid-trend-chart { margin-top: 22px; }
+.paid-trend-row { display: grid; grid-template-columns: 90px minmax(80px, 1fr) minmax(115px, auto); align-items: center; gap: 16px; margin-top: 12px; font-size: 12px; }
+.paid-trend-row meter { width: 100%; height: 14px; accent-color: #28583d; }
+.paid-trend-row strong { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.paid-trend-empty { margin-top: 22px; color: #65746d; font-size: 12px; }
 
 @media (min-width: 1440px) {
   main { padding: 35px 48px; }
@@ -204,7 +215,9 @@ td { padding: 0; }
   .payment-mobile-card dt { color: #65776b; font-size: 10px; margin-bottom: 5px; }
   .payment-mobile-card dd { margin: 0; white-space: pre-wrap; }
   .currency-summary:not(.status-summary) dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .status-summary dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .currency-summary dd { font-size: 22px; }
+  .paid-trend-row { grid-template-columns: 68px minmax(35px, 1fr) minmax(95px, auto); gap: 9px; font-size: 11px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

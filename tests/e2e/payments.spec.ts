@@ -41,9 +41,10 @@ test('vade tarihi tutardan sonra gösterilir ve gerçekleşen tarihten bağıms�
     const headings = list.getByRole('columnheader')
     await expect(headings.nth(2)).toHaveText('Ödeme Şekli')
     await expect(headings.nth(3)).toHaveText('Tutar')
-    await expect(headings.nth(4)).toHaveText('Vade Tarihi')
-    await expect(headings.nth(5)).toHaveText('Gerçekleşen Ödeme Tarihi')
-    await expect(record.getByRole('cell').nth(4)).toHaveText('30.11.2026')
+    await expect(headings.nth(4)).toHaveText('Kalan')
+    await expect(headings.nth(5)).toHaveText('Vade Tarihi')
+    await expect(headings.nth(6)).toHaveText('Gerçekleşen Ödeme Tarihi')
+    await expect(record.getByRole('cell').nth(5)).toHaveText('30.11.2026')
   } else {
     await expect(record.getByText('Vade Tarihi', { exact: true }).locator('..')).toContainText('30.11.2026')
   }
@@ -151,6 +152,36 @@ test('yeni ödeme türleri saklanır ve genel bakışta özetlenir', async ({ pa
   }
 })
 
+test('kalan tutar kısmi durumu seçer; sıfırda durum kullanıcı seçimine bağlı kalır', async ({ page, isMobile }) => {
+  await addPayment(page, 'Kısmi ödeme örneği', '100', 'TRY', 'invoice')
+  const list = isMobile ? page.getByLabel('Mobil ödeme listesi') : page.getByRole('table')
+  const record = list.getByRole(isMobile ? 'article' : 'row').filter({ hasText: 'Kısmi ödeme örneği' })
+
+  await record.getByRole('button', { name: 'Ödemeyi düzenle: Kısmi ödeme örneği' }).click()
+  const form = page.getByRole('form', { name: 'Ödeme formu' })
+  await form.locator('#payment-remainingAmount').fill('20')
+  await expect(form.locator('#payment-status')).toHaveValue('partially_paid')
+  await form.getByRole('button', { name: 'Değişiklikleri kaydet' }).click()
+  await expect(form).toBeHidden()
+  await expect(record.getByText('Kısmen Ödendi', { exact: true })).toBeVisible()
+
+  await page.goto('/overview')
+  const summary = page.getByRole('article', { name: 'TRY özeti' })
+  await expect(summary.getByText('80,00 TL', { exact: true })).toBeVisible()
+  await expect(summary.getByText('20,00 TL', { exact: true })).toBeVisible()
+  const statuses = page.getByRole('region', { name: 'Kayıt durumları' })
+  await expect(statuses.getByText('Kısmen ödenen kayıt', { exact: true }).locator('..')).toHaveText('Kısmen ödenen kayıt1')
+
+  await page.getByRole('link', { name: 'Ödeme tablosuna git', exact: true }).click()
+  await record.getByRole('button', { name: 'Ödemeyi düzenle: Kısmi ödeme örneği' }).click()
+  await form.locator('#payment-remainingAmount').fill('0')
+  await expect(form.locator('#payment-status')).toHaveValue('partially_paid')
+  await form.locator('#payment-status').selectOption('unpaid')
+  await form.getByRole('button', { name: 'Değişiklikleri kaydet' }).click()
+  await expect(form).toBeHidden()
+  await expect(record.getByText('Ödenmedi', { exact: true })).toBeVisible()
+})
+
 test('başka oturumda güncellenen kaydın üzerine eski düzenleme yazılmaz', async ({ page, context, isMobile }) => {
   await addPayment(page, 'İki sekmeli örnek', '10', 'TRY', 'invoice')
   const list = isMobile ? page.getByLabel('Mobil ödeme listesi') : page.getByRole('table')
@@ -165,11 +196,13 @@ test('başka oturumda güncellenen kaydın üzerine eski düzenleme yazılmaz', 
   const currentForm = otherPage.getByRole('form', { name: 'Ödeme formu' })
   await currentForm.locator('#payment-amount').fill('20')
   await currentForm.getByRole('button', { name: 'Değişiklikleri kaydet' }).click()
-  await expect(otherList.getByText('20,00 TL', { exact: true })).toBeVisible()
+  const currentRecord = otherList.getByRole(isMobile ? 'article' : 'row').filter({ hasText: 'İki sekmeli örnek' })
+  await expect(isMobile ? currentRecord.locator('.mobile-amount') : currentRecord.getByRole('cell').nth(3)).toHaveText('20,00 TL')
 
   await staleForm.getByRole('button', { name: 'Değişiklikleri kaydet' }).click()
   await expect(page.getByRole('alert')).toContainText('başka bir kullanıcı tarafından değiştirilmiş')
   await expect(staleForm.locator('#payment-amount')).toHaveValue('99')
-  await expect(list.getByText('20,00 TL', { exact: true })).toBeVisible()
+  const staleRecord = list.getByRole(isMobile ? 'article' : 'row').filter({ hasText: 'İki sekmeli örnek' })
+  await expect(isMobile ? staleRecord.locator('.mobile-amount') : staleRecord.getByRole('cell').nth(3)).toHaveText('20,00 TL')
   await otherPage.close()
 })

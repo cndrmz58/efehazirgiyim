@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { paymentSchema, type Payment, type PaymentInput } from './payment-model'
 
 // Amounts are read as text so exact decimal values never pass through a JavaScript number.
-const columns = 'id, organization_id, detail, payment_type, payment_method, amount::text, currency, due_on, paid_on, notes, status, revision, created_at, updated_at'
+const columns = 'id, organization_id, detail, payment_type, payment_method, amount::text, remaining_amount::text, currency, due_on, paid_on, notes, status, revision, created_at, updated_at'
 
 const rowSchema = z.object({
   id: z.string(),
@@ -12,6 +12,7 @@ const rowSchema = z.object({
   payment_type: z.string(),
   payment_method: z.enum(['check', 'cash', 'bank']).nullable(),
   amount: z.string(),
+  remaining_amount: z.string(),
   currency: z.string(),
   due_on: z.string().nullable(),
   paid_on: z.string().nullable(),
@@ -53,6 +54,7 @@ function toPayment(row: unknown): Payment | null {
     type: value.payment_type,
     paymentMethod: value.payment_method,
     amount: value.amount,
+    remainingAmount: value.remaining_amount,
     currency: value.currency,
     dueOn: value.due_on ?? '',
     paidOn: value.paid_on ?? '',
@@ -76,6 +78,7 @@ function editableFields(input: PaymentInput) {
     payment_type: input.type,
     payment_method: input.paymentMethod,
     amount: input.amount,
+    remaining_amount: input.remainingAmount,
     currency: input.currency,
     due_on: input.dueOn || null,
     paid_on: input.paidOn || null,

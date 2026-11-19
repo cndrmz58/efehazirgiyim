@@ -12,12 +12,16 @@ type Call = [string, ...unknown[]]
 type Response = { data: unknown; error: { code: string } | null; count?: number }
 type Handler = (table: string, calls: Call[]) => Response
 
-const row = (overrides: Record<string, unknown> = {}) => ({
+const row = (overrides: Record<string, unknown> = {}) => {
+  const amount = overrides.amount ?? '999999999999.99'
+  const status = overrides.status ?? 'unpaid'
+  return ({
   id: '00000000-0000-4000-8000-000000000031', organization_id: organizationId,
-  detail: 'Kira', payment_type: 'rent', payment_method: null, amount: '999999999999.99', currency: 'TRY', due_on: null, paid_on: null,
-  notes: null, status: 'unpaid', revision: 1, created_at: '2026-11-19T10:00:00.123456+00:00', updated_at: '2026-11-19T10:00:00+00:00',
+  detail: 'Kira', payment_type: 'rent', payment_method: null, amount, remaining_amount: status === 'paid' ? '0.00' : amount, currency: 'TRY', due_on: null, paid_on: null,
+  notes: null, status, revision: 1, created_at: '2026-11-19T10:00:00.123456+00:00', updated_at: '2026-11-19T10:00:00+00:00',
   ...overrides,
-})
+  })
+}
 
 function workspace(role: 'manager' | 'viewer' | null, rows: unknown[] = [row()], count = rows.length): Handler {
   return (table) => ({
@@ -65,9 +69,9 @@ describe('Supabase ödeme tablosu', () => {
 
     const table = await screen.findByRole('table')
     expect(within(table).getAllByRole('columnheader').map((header) => header.textContent)).toEqual([
-      'Ödeme Detayı', 'Ödeme Türü', 'Ödeme Şekli', 'Tutar', 'Vade Tarihi', 'Gerçekleşen Ödeme Tarihi', 'Açıklama', 'Durum',
+      'Ödeme Detayı', 'Ödeme Türü', 'Ödeme Şekli', 'Tutar', 'Kalan', 'Vade Tarihi', 'Gerçekleşen Ödeme Tarihi', 'Açıklama', 'Durum',
     ])
-    expect(within(table).getByText('999.999.999.999,99 TL')).toBeVisible()
+    expect(within(table).getAllByText('999.999.999.999,99 TL')).toHaveLength(2)
     expect(within(table).getByText('Belirtilmedi')).toBeVisible()
     expect(screen.getByRole('button', { name: 'Ödeme Ekle' })).toBeDisabled()
     expect(screen.getByText('Kayıt ekleme yetkiniz yok')).toBeVisible()
@@ -147,8 +151,31 @@ describe('Supabase ödeme tablosu', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Ödeme kaydedildi.')
     expect(screen.getByRole('table')).toHaveTextContent('12,50 TL')
     const insert = requests.find(({ calls }) => isWrite(calls))?.calls.find(([method]) => method === 'insert')
-    expect(insert?.[1]).toMatchObject({ organization_id: organizationId, payment_method: 'check', amount: '12.50', due_on: null, notes: null })
+    expect(insert?.[1]).toMatchObject({ organization_id: organizationId, payment_method: 'check', amount: '12.50', remaining_amount: '12.50', due_on: null, notes: null })
     expect(insert?.[1]).not.toHaveProperty('department_id')
+  })
+
+  it('kalan tutar ara değere düştüğünde kısmi durumu seçer; sıfırda durumu kendiliğinden değiştirmez', async () => {
+    const user = userEvent.setup()
+    renderPage(workspace('manager', []))
+
+    await user.click(await screen.findByRole('button', { name: 'Ödeme Ekle' }))
+    const form = within(screen.getByRole('form', { name: 'Ödeme formu' }))
+    await user.type(form.getByLabelText(/Tutar/), '100')
+    const remaining = form.getByLabelText(/Kalan/)
+    expect(remaining).toHaveValue('100')
+
+    await user.clear(remaining)
+    await user.type(remaining, '20')
+    const status = form.getByLabelText(/Durum/)
+    expect(status).toHaveValue('partially_paid')
+
+    await user.clear(remaining)
+    await user.type(remaining, '0')
+    expect(status).toHaveValue('partially_paid')
+    await user.selectOptions(status, 'unpaid')
+    expect(status).toHaveValue('unpaid')
+    expect(remaining).toHaveValue('0')
   })
 
   it('birden fazla yetkili şirket varsa yeni kaydın şirketini seçtirir', async () => {

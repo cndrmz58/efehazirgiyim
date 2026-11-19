@@ -19,6 +19,7 @@ export const tr = {
     type: 'Ödeme Türü',
     paymentMethod: 'Ödeme Şekli',
     amount: 'Tutar',
+    remainingAmount: 'Kalan',
     dueDate: 'Vade Tarihi',
     date: 'Gerçekleşen Ödeme Tarihi',
     notes: 'Açıklama',
@@ -40,6 +41,7 @@ export const tr = {
     statuses: {
       paid: 'Ödendi',
       unpaid: 'Ödenmedi',
+      partially_paid: 'Kısmen Ödendi',
     },
   },
 } as const
