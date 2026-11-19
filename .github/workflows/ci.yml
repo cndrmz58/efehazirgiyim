@@ -4,9 +4,13 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+env:
+  SUPABASE_CLI_VERSION: '3.2.0'
 
 jobs:
   checks:
@@ -24,3 +28,51 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Apply migrations to a fresh local database
+        run: npx --yes "supabase@$SUPABASE_CLI_VERSION" db start
+      - name: Run SQL regression tests
+        run: |
+          for test in supabase/tests/*.sql; do
+            echo "Running $test"
+            docker exec -i supabase_db_efe-financial-operations \
+              psql -X -U postgres -d postgres -v ON_ERROR_STOP=1 < "$test"
+          done
+      - name: Remove disposable database
+        if: ${{ always() }}
+        run: npx --yes "supabase@$SUPABASE_CLI_VERSION" stop --no-backup
+
+  migrate-production:
+    if: >-
+      github.ref == 'refs/heads/main' && github.event_name != 'pull_request' &&
+      vars.ENABLE_DATABASE_DEPLOYMENTS == 'true'
+    needs: [checks, database]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    concurrency: supabase-migrations-production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: npx --yes "supabase@$SUPABASE_CLI_VERSION" --version
+      - name: Preview and apply pending production migrations
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          : "${SUPABASE_DB_URL:?Configure the production environment database secret}"
+          npx --offline --yes "supabase@$SUPABASE_CLI_VERSION" db push "--remote=$SUPABASE_DB_URL" --skip-vault --dry-run
+          npx --offline --yes "supabase@$SUPABASE_CLI_VERSION" db push "--remote=$SUPABASE_DB_URL" --skip-vault --yes

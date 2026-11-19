@@ -191,8 +191,10 @@ financial workflow, not only its UI:
 
 ## Database and schema changes
 
-The initial identity migration is in `supabase/migrations/`. Before extending
-it, confirm the approved scope and architecture, then:
+Read [database.md](./database.md) before any database change and update it
+before editing the related SQL. Keep database decisions, schema and access
+contracts, and SQL validation instructions there. Confirm the approved scope
+and architecture, then:
 
 - Commit schema, indexes, constraints, functions, grants, RLS policies, and
   required reference data as reviewed, version-controlled migrations.

@@ -4,14 +4,19 @@ Private payment and collection management for EFE HAZIR GIYIM.
 
 - Company website: https://www.efehazirgiyim.com
 - Planned application address: https://app.efehazirgiyim.com
-- Status: **browser-local test payments; Supabase identity foundation prepared, not deployed**.
+- Status: **browser-local test payments; Supabase Auth configured and three Auth users created, but memberships and database migrations are not deployed; Vercel app deployment awaits DNS and the login gate**.
 
 The Supabase foundation adds invite-based login, password recovery, and a
-versioned RLS migration for organizations and departments. Hosted Auth,
-shared financial records, and uploads are not active. The optional test workspace stores only
-owner-entered example records in this browser, never in Supabase. No sample
-financial records are presented as company data. Do not enter real company
-financial or personal information into test mode.
+versioned RLS migration for organizations and departments. Production Auth
+now has public signup and anonymous sign-ins disabled, email/password login
+enabled, a 12-character minimum password, and the production app/callback URLs.
+Three Auth users exist, but organization/department memberships are not
+assigned. The Vercel production project is configured, and the app subdomain
+is attached, but DNS and deployment remain pending. SMTP and hosted email
+templates, shared financial records, and uploads are not active. The optional
+test workspace stores only owner-entered example records in this browser,
+never in Supabase. No sample financial records are presented as company data.
+Do not enter real company financial or personal information into test mode.
 
 ## Current agreed delivery: a simple manually filled table
 
@@ -33,6 +38,9 @@ and combined type/status/currency filters, desktop tables, mobile record cards,
 and a data-driven General Overview (`/overview`). TL is the default currency
 for both new records and the initial table filter. New or edited records become
 visible by resetting other filters and selecting that record's currency.
+
+Only **Ödemeler** and **Genel Bakış** are selectable in the sidebar. The
+other entries, including **Ayarlar**, are visible but disabled.
 
 ### Using test mode
 
@@ -163,105 +171,9 @@ Authenticated administrative requests
 - All schema changes, policies, functions, and reference-data seeds are committed
   as migrations. Dashboard-only schema changes are not the deployment process.
 
-### Financial domain (optional later expansion)
+## 3. Database design
 
-For the originally requested full platform, use one canonical
-`financial_records` table with a `direction` of `payment` or
-`collection`, and one `settlements` ledger for actual payments/receipts. This
-avoids maintaining two implementations of balances, permissions, and auditing.
-Direction-specific forms expose supplier/beneficiary versus customer wording.
-
-Read-only `payments` and `collections` views provide separate query surfaces.
-They must use `security_invoker = true` so underlying RLS remains effective.
-Mutations go through narrow, authorized RPCs, not writable views.
-
-No separate approval workflow, bank integration, tax accounting, foreign exchange
-conversion, or native mobile app is included in the initial scope.
-
-## 3. Full-platform database proposal (not migrated)
-
-This is the retained full-platform proposal. It is not the final schema for the
-narrowed manual-payment MVP. In particular, manual payment state and actual
-payment date must be modeled directly for the initial table. Collections,
-settlements, and derived financial calculations remain deferred.
-
-Unless stated otherwise, identifiers are UUIDs. Business tables include
-`organization_id`, `created_at`, `updated_at`, `created_by`, and `updated_by`
-where applicable. Actor fields are assigned by the database, not trusted from
-request payloads. Timestamps use `timestamptz`; business dates use `date`.
-
-| Table | Principal columns and purpose |
-| --- | --- |
-| `organizations` | `id`, `name`, `timezone`, `default_currency`, `archived_at` |
-| `profiles` | `user_id` referencing `auth.users`, `display_name`; authentication credentials remain in Auth |
-| `organization_memberships` | `id`, `organization_id`, `user_id`, `organization_role_id`, `status`; unique organization/user |
-| `departments` | `id`, `organization_id`, `name`, `archived_at`; organization-local unique name |
-| `roles` | `id`, `key`, `scope` (`organization` or `department`); system-managed role definitions |
-| `permissions` | `id`, unique `key`; explicit capabilities such as `records.read` and `settlements.create` |
-| `role_permissions` | `role_id`, `permission_id`; unique pair |
-| `department_memberships` | `organization_id`, `department_id`, `organization_membership_id`, `role_id`; unique membership/department |
-| `business_contacts` | `id`, `organization_id`, `name`, `contact_type` (`supplier`, `customer`, `both`, `other`), optional contact details, `archived_at` |
-| `financial_categories` | `id`, `organization_id`, `name`, `direction`, `archived_at` |
-| `currencies` | ISO currency `code`, supported `minor_units`; system-managed reference data |
-| `financial_records` | `id`, `organization_id`, `department_id`, `direction`, `contact_id`, `category_id`, `description`, `amount numeric(20,4)`, `currency_code`, optional `invoice_date`, `due_date`, `notes`, `cancelled_at`, `cancelled_by`, `cancellation_reason`, `archived_at`, `version` |
-| `settlements` | `id`, `organization_id`, `financial_record_id`, `entry_type` (`settlement` or `reversal`), positive `amount numeric(20,4)`, `occurred_on`, `notes`, optional `reverses_settlement_id`, `idempotency_key`, creation actor/time |
-| `documents` | `id`, `organization_id`, `department_id`, optional `financial_record_id`, `storage_path`, original filename, declared/detected MIME metadata, `size_bytes`, upload state, upload actor/time, `archived_at` |
-| `audit_logs` | `id`, `organization_id`, optional `department_id`, actor, action, entity type/id, changed fields, event time, request correlation identifier |
-| `user_invitations` | `id`, `organization_id`, normalized email, requested organization role and department assignments, status, invited Auth user id when available, inviter/time; no invitation tokens |
-
-### Relationships and integrity
-
-- Every department membership requires an active organization membership.
-- Composite foreign keys include `organization_id` to prevent cross-organization
-  contact, department, category, record, settlement, and document references.
-- A linked document must also match its record's department.
-- Role scope must match the membership type; category direction must match the
-  record direction. These invariants are enforced in the database.
-- Financial amount is positive and respects the selected currency's precision.
-  Settlement currency is inherited from its parent record and cannot differ.
-- Financial records reference a department; users may belong to multiple
-  departments. Archived departments accept no new operational records.
-- Financial history is not cascade-deleted. Referenced entities are archived;
-  settled records are corrected through controlled changes and ledger reversals.
-- Financial indexes begin with organization/department where useful, followed
-  by due date, direction, contact, and creation time. Ledger and audit indexes
-  cover parent/entity identifiers and time. Search indexes follow actual queries.
-- Calendar and table queries use the same permission-filtered database queries.
-
-### Balance, dates, and status
-
-```text
-settled_amount = SUM(settlement entries) - SUM(reversal entries)
-remaining_amount = record.amount - settled_amount
-```
-
-Amounts and statuses are calculated in PostgreSQL, not independently maintained
-in editable columns.
-
-- Settlement state: unpaid/unreceived, partial, or paid/collected.
-- Due state: upcoming, due today, or overdue while a balance remains.
-- Lifecycle state: active, cancelled, or archived.
-- Partial overdue records display both properties rather than losing one.
-- Actual completion date is the date the effective settlement ledger reaches
-  the record amount; settlement history retains every individual actual date.
-  It is null again if a correction reopens the balance.
-- Reversals retain the original entry and reason. Each original entry can be
-  fully reversed once; a corrected amount is entered as a new settlement.
-- Initial policy: reject overpayments/overcollections. Credits and advances
-  require a later explicit model.
-- Record currency/direction cannot change after ledger entries exist. Changes
-  to amount cannot reduce it below the effective settled total.
-- Cancellation requires a zero effective settled amount and a reason.
-- Due-state calculations use the organization's date, not the browser timezone.
-
-### Concurrent updates
-
-Settlement RPCs lock the parent record before checking and inserting ledger
-entries. This prevents simultaneous requests from exceeding its amount.
-Organization-scoped idempotency keys prevent duplicate settlements on retries.
-Record edits use a version check and report conflicts rather than overwriting
-another employee's changes. Record edits and reversals share the parent-lock
-discipline. All related changes and audit entries commit or roll back together.
+See [database.md](./database.md) for the manual-payment schema and deferred database proposals.
 
 ## 4. Authentication and authorization
 
@@ -292,69 +204,11 @@ PostgreSQL transaction. Persist invitation intent, make retries idempotent, and
 surface delivery/provisioning failures explicitly. An incomplete invitation must
 not accidentally grant permissions.
 
-### Proposed initial access matrix
-
-| Capability | Organization admin | Department manager | Department editor | Department viewer |
-| --- | --- | --- | --- | --- |
-| Read financial records | All organization departments | Assigned departments | Assigned departments | Assigned departments |
-| Create/edit records and add settlements | Yes | Assigned departments | Assigned departments | No |
-| Reverse settlements, cancel/archive records | Yes | Assigned departments | No | No |
-| Upload documents | All departments | Assigned departments | Assigned departments | No |
-| Read documents | All departments | Assigned departments | Assigned departments | Assigned departments |
-| Read financial audit history | Organization-wide | Assigned departments | No | No |
-| Manage users, departments, and access | Yes | No | No | No |
-| Manage organization settings | Yes | No | No | No |
-
-The organization member role alone grants no financial department access.
-Initial roles are fixed and seeded; an arbitrary permission/role editor is not
-part of phase one. Prevent removing or suspending the last active administrator.
-Users cannot change their own roles through profile or membership endpoints.
-
-Proposed contact policy: active users with at least one authorized department
-can read the organization-wide business-contact directory. Managers and admins
-can maintain it. Contact visibility does **not** grant visibility into related
-transactions. This sharing policy requires architectural approval.
-
-### Database enforcement
-
-- Enable RLS on every exposed business table, including memberships, documents,
-  configuration, and audit logs. Explicitly grant only required operations.
-- Apply organization isolation and current permission checks to both reads and
-  writes; write policies include `WITH CHECK`.
-- Never authorize using editable user metadata or frontend route guards.
-- Restrict membership, role, invitation, and configuration writes to authorized
-  administrative operations.
-- Revoke direct financial ledger writes. Allow only specific audited RPCs.
-- Prefer invoker functions. Where a definer function is necessary, fix its
-  `search_path`, qualify objects, restrict execution grants, validate the caller
-  and every target identifier, and avoid dynamic SQL.
-- Keep authorization helpers in a non-exposed schema and design them to avoid
-  recursive membership RLS evaluation.
-- Audit triggers record financial and administrative changes. Application users
-  cannot insert, rewrite, or delete audit entries. Never log passwords, tokens,
-  service credentials, or document bodies.
-- Audit logs are application-append-only, not tamper-proof against database
-  owners. External immutable retention is a separate future requirement.
+Database roles and row-level policies are documented in [database.md](./database.md).
 
 ## 5. Document storage
 
-- Use a private Supabase Storage bucket, never public invoice URLs.
-- Suggested object path:
-  `organization-id/department-id/document-id/random-object-name`.
-- Storage RLS checks active membership, department permissions, and matching
-  document metadata; guessing a path must not grant access.
-- Downloads use authenticated access or short-lived signed URLs after an
-  authorization check. Signed URLs remain usable until expiry, so keep expiry
-  short and never persist them in database records.
-- Uploads have explicit pending/ready/failed states. Failed uploads are visible
-  as failures; bounded cleanup removes orphaned pending uploads.
-- Validate allowed formats and file size on trusted infrastructure, not just
-  the file picker. Treat client MIME metadata as untrusted; do not render
-  executable attachments inline. Initial scope: PDF, JPEG, and PNG, up to 10 MiB.
-- Camera capture is offered where supported, alongside a standard file input.
-- Malware scanning is not supplied automatically by Storage. If mandatory,
-  choose a scanner before enabling production uploads; otherwise document the
-  residual risk and restrict file formats and download behavior.
+Private storage is deferred; see the [database proposal](./database.md#document-storage).
 
 ## 6. Responsive application and PWA
 
@@ -470,17 +324,8 @@ If you are working locally, use the URL and publishable key reported by
 `supabase status`, not the production project. Invalid settings show field
 names, never their values.
 
-Install the Supabase CLI, a Docker-compatible runtime, and `psql` to validate
-the identity foundation locally:
-
-```sh
-supabase start
-supabase db reset
-psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' -v ON_ERROR_STOP=1 -f supabase/tests/identity.sql
-```
-
-`supabase db reset` is for the disposable local database only: it destroys local
-data and reapplies migrations. Never use reset as a production deployment step.
+For local migration and database test instructions, see
+[Local SQL validation](./database.md#local-sql-validation).
 
 Every `VITE_` variable is public browser configuration. Never put a Supabase
 service-role/secret key, database password, email credential, or future
@@ -531,76 +376,33 @@ forced tooling downgrade without reviewing compatibility. These packages
 process trusted repository patterns in development/CI, not financial input in
 the deployed browser. Reassess the advisory before production release.
 
-## 10. Supabase production activation (not applied)
+## 10. Supabase production activation (partially applied)
 
-1. Verify migration, invitation, recovery, login, and logout on an isolated
-   staging project before deploying. Enable backups and review the production
-   recovery plan. Confirm the linked project, inspect `supabase db push
-   --dry-run`, and run `supabase db push` only after review and approval.
-2. In production Supabase Auth, disable public signup and anonymous sign-ins,
-   keep the email provider enabled, and require passwords of at least 12
-   characters. Set up SMTP. Set the Site URL to `https://app.efehazirgiyim.com`
-   and allow `https://app.efehazirgiyim.com/auth/callback`. Do not allow
-   localhost or arbitrary preview domains on production Auth.
-3. Paste the contents of [invite.html](./supabase/templates/invite.html) and
-   [recovery.html](./supabase/templates/recovery.html) into the matching hosted
-   Auth email templates. Local `config.toml` does not configure hosted Auth.
-   The fragment keeps the one-time token out of HTTP request URLs; the app
-   consumes it only after the user submits a new password.
-4. In Vercel **Production** only, set the three public `VITE_` variables from
-   the local-development section with production values. The configured
-   project origin must match the `connect-src` allowlist in `vercel.json`.
-   Do not use database credentials or a secret key in these variables.
-5. Invite the initial administrator from the Supabase Dashboard. After their
-   email and Auth UUID are verified, a trusted database operator can create
-   the organization, departments and active membership in one transaction
-   (see below). Invitees without an active membership have no business access.
-   The application cannot change memberships, including for administrators.
-
-Operator example for an empty target, to adapt and review before execution:
-
-```sql
-begin;
-with new_org as (
-  insert into public.organizations (name) values ('EFE Hazır Giyim')
-  returning id
-), initial_departments as (
-  insert into public.departments (organization_id, name)
-  select id, d.name from new_org
-  cross join (values ('Muhasebe'), ('Finans'), ('Satın Alma'), ('Satış'), ('Yönetim')) d(name)
-)
-insert into public.organization_memberships (organization_id, user_id, role, active)
-select id, '<verified-auth-user-uuid>'::uuid, 'admin', true from new_org;
-commit;
-```
-
-In-app invitations, audited membership administration, remote payments, and
-private document storage are deferred. Do not import browser test records.
+Hosted Auth's core production settings are configured. See
+[database.md](./database.md#supabase-production-activation-partially-applied)
+for the remaining Auth email, user provisioning, and database migration steps.
+The production database migrations have not been deployed.
 
 ## 11. Vercel deployment and custom domain
 
-The foundation includes Vite build settings, extensionless SPA-route rewrites,
-and baseline security headers in `vercel.json`. A preview deploy is possible,
-but it is **only a browser-local test preview**, not a secure working platform.
-The current Content Security Policy permits same-origin connections only;
-before connecting Supabase, add the exact project HTTPS/WebSocket origins
-and test the policy. Do not broaden it to arbitrary hosts.
+The repository is linked to the `efe-financial-operations` Vercel project,
+configured for Vite, `npm run build`, `dist`, and Node 24.x. Production
+Supabase environment variables are set. The exact Supabase project origin is
+allowlisted in the Content Security Policy; do not broaden it to arbitrary
+hosts. The app domain is attached to the project, but its DNS record is not
+configured and no deployment has been made.
 
-1. Connect the GitHub repository to Vercel.
-2. Select Vite; build with `npm run build`; publish `dist`.
-3. Configure the public environment variables for each Vercel environment.
-   Production targets production Supabase; previews target staging, never
-   production by default.
-4. Verify the configured SPA rewrites on direct links and future Auth callbacks;
+1. Keep the GitHub repository connected to Vercel.
+2. Verify the configured SPA rewrites on direct links and future Auth callbacks;
    real static assets must continue to be served normally.
-5. Review the baseline security headers and extend the Content Security Policy
-   only for the exact Supabase origins when that integration is implemented.
-   Never place secrets in Vercel frontend build variables.
-6. Add `app.efehazirgiyim.com` in Vercel and create the DNS record Vercel
-   specifies. Do not modify the existing company website's root or `www` records.
-7. Verify HTTPS, canonical application URL, deep links, login, password recovery,
-   invitation acceptance, and private document access on the real domain.
-8. Coordinate Auth URL settings when changing the canonical domain; redeploy
+3. Configure preview environments to use a staging Supabase project; never
+   use production credentials in previews. Keep every `VITE_` variable public.
+4. Create only the `app` CNAME record Vercel specifies at the DNS provider.
+   Do not change nameservers or the existing company website's root or `www`
+   records.
+5. Add the session gate before starting a public deployment. Then verify HTTPS,
+   canonical URL, deep links, login, and password recovery on the real domain.
+6. Coordinate Auth URL settings when changing the canonical domain; redeploy
    frontend configuration rather than embedding a hard-coded hostname in code.
 
 Frontend rollback and database rollback are separate operations. Use compatible
@@ -628,8 +430,8 @@ separate company approval and data-handling decisions.
   due date is separate from the actual payment date; it does not change status.
 - TL (TRY) is the default; EUR and USD are selectable.
 - Manual exchange-rate behavior is deferred; do not implement conversion.
-- The identity foundation is in the repository; production activation and
-  the narrowed remote payment schema are separate steps.
+- The identity and manual-payment migrations are in the repository. Hosted
+  rollout and application access to the payment table remain separate steps.
 - The broader roadmap is retained for reference, not automatic implementation.
 - Confirm scanning, retention, recovery, and compliance requirements before any
   production document upload or live financial-data rollout.

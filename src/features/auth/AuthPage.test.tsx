@@ -1,5 +1,5 @@
 import { AuthApiError, createClient } from '@supabase/supabase-js'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, expect, it, vi } from 'vitest'
@@ -24,8 +24,8 @@ it('keeps password recovery responses generic for an unknown account', async () 
     data: null, error: new AuthApiError('Unknown user', 404, 'user_not_found'),
   })
   await user.click(await screen.findByRole('button', { name: 'Parolamı unuttum' }))
-  await user.type(screen.getByLabelText('E-posta'), 'test@example.com')
-  await user.click(screen.getByRole('button', { name: 'Yenileme bağlantısı iste' }))
+  await user.type(screen.getByLabelText('Kurumsal e-posta'), 'test@example.com')
+  await user.click(screen.getByRole('button', { name: 'Bağlantı iste' }))
   expect(reset).toHaveBeenCalledWith('test@example.com', { redirectTo: `${appUrl}/auth/callback` })
   expect(await screen.findByRole('status')).toHaveTextContent('e-posta gönderilecektir')
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
@@ -39,7 +39,11 @@ it('scrubs invitation tokens and does not change a password for an invalid invit
     data: { user: null, session: null }, error: new AuthApiError('Expired', 403, 'otp_expired'),
   })
   const update = vi.spyOn(client.auth, 'updateUser')
-  await user.type(await screen.findByLabelText(/Yeni parola/), 'example-password')
+  const form = await screen.findByRole('form', { name: 'Parola belirleme' })
+  const passwordInput = within(form).getByLabelText(/Yeni parola/)
+  await user.type(passwordInput, 'example-password')
+  expect(passwordInput).toHaveValue('example-password')
+  expect(passwordInput).toBeValid()
   expect(window.location.hash).toBe('')
   expect(verify).not.toHaveBeenCalled()
   await user.click(screen.getByRole('button', { name: 'Parolayı kaydet' }))

@@ -3,7 +3,7 @@ import {
   CircleHelp, Files, LayoutGrid, Menu, Settings, ShieldCheck, Users, X,
 } from 'lucide-react'
 import { lazy, Suspense, useState } from 'react'
-import { Link, Navigate, NavLink, Route, Routes } from 'react-router-dom'
+import { Link, Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import { SetupNotice } from '../components/SetupNotice'
 import { PaymentsPage } from '../features/payments/PaymentsPage'
 import { SettingsPage } from '../features/settings/SettingsPage'
@@ -11,7 +11,9 @@ import { OverviewPage } from '../features/overview/OverviewPage'
 import { TestPaymentsProvider } from '../features/payments/TestPaymentsProvider'
 import { TestModePanel } from '../features/payments/TestModePanel'
 import { useTestPayments } from '../features/payments/test-payment-store'
+import type { AuthConfig } from '../features/auth/auth-client'
 import { readEnvironment } from '../lib/environment'
+import type { EnvironmentState } from '../lib/environment'
 import { tr } from '../locales/tr'
 
 const navigation = [
@@ -26,9 +28,8 @@ const navigation = [
   { path: '/settings', label: tr.navigation.settings, icon: Settings },
 ]
 
-const environment = readEnvironment(import.meta.env)
-const authConfig = environment.status === 'configured' ? environment.config : null
 const AuthPage = lazy(() => import('../features/auth/AuthPage'))
+const AuthGate = lazy(() => import('../features/auth/AuthPage').then(({ AuthGate: Gate }) => ({ default: Gate })))
 
 function PlannedPage({ title }: { title: string }) {
   return (
@@ -43,9 +44,17 @@ function PlannedPage({ title }: { title: string }) {
   )
 }
 
-function Workspace() {
+function Workspace({ environment, authConfig }: { environment: EnvironmentState; authConfig: AuthConfig | null }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const { enabled } = useTestPayments()
+  const { pathname } = useLocation()
+
+  if (pathname === '/auth') return <Navigate to="/giris" replace />
+  if (pathname === '/giris' || pathname === '/auth/callback') {
+    return <Suspense fallback={<p role="status">Giriş yükleniyor…</p>}>
+      <AuthPage key={pathname} config={authConfig} callback={pathname === '/auth/callback'} />
+    </Suspense>
+  }
 
   return (
     <div className="app-shell">
@@ -64,11 +73,16 @@ function Workspace() {
         </Link>
         <p className="navigation-label">ÇALIŞMA ALANI</p>
         <nav aria-label="Ana menü">
-          {navigation.map(({ path, label, icon: Icon }) => (
-            <NavLink key={path} to={path} className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`} onClick={() => setMenuOpen(false)}>
-              <Icon size={19} aria-hidden="true" /><span>{label}</span>
-            </NavLink>
-          ))}
+          {navigation.map(({ path, label, icon: Icon }) => {
+            const content = <><Icon size={19} aria-hidden="true" /><span>{label}</span></>
+            return path === '/overview' || path === '/payments' ? (
+              <NavLink key={path} to={path} className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`} onClick={() => setMenuOpen(false)}>
+                {content}
+              </NavLink>
+            ) : (
+              <button key={path} type="button" className="nav-link" disabled>{content}</button>
+            )
+          })}
         </nav>
         <div className="sidebar-bottom">
           <CircleHelp size={18} aria-hidden="true" />
@@ -79,7 +93,7 @@ function Workspace() {
       <div className="workspace">
         <div className="workspace-header">
           <span>{tr.application} <ChevronRight size={14} aria-hidden="true" /> Çalışma Alanı</span>
-          {authConfig && <Link className="button-text" to="/auth">Güvenli giriş</Link>}
+          {authConfig && <Link className="button-text" to="/giris">Güvenli giriş</Link>}
           <span className="development-badge">Geliştirme ortamı</span>
         </div>
         <main id="main-content" tabIndex={-1}>
@@ -90,8 +104,6 @@ function Workspace() {
             <Route path="/payments" element={<PaymentsPage key={enabled ? 'test' : 'disabled'} />} />
             <Route path="/overview" element={<OverviewPage />} />
             <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/auth" element={<Suspense fallback={<p role="status">Giriş yükleniyor…</p>}><AuthPage key="login" config={authConfig} /></Suspense>} />
-            <Route path="/auth/callback" element={<Suspense fallback={<p role="status">Giriş yükleniyor…</p>}><AuthPage key="callback" config={authConfig} callback /></Suspense>} />
             {navigation.filter(({ path }) => !['/payments', '/settings', '/overview'].includes(path)).map(({ path, label }) => (
               <Route key={path} path={path} element={<PlannedPage title={label} />} />
             ))}
@@ -104,6 +116,24 @@ function Workspace() {
   )
 }
 
-export function App() {
-  return <TestPaymentsProvider><Workspace /></TestPaymentsProvider>
+export function App({ environment = readEnvironment(import.meta.env) }: { environment?: EnvironmentState }) {
+  const authConfig = environment.status === 'configured' ? environment.config : null
+
+  if (import.meta.env.PROD && !authConfig) {
+    return (
+      <main className="min-h-screen p-8">
+        <section className="settings-card" role="alert">
+          <h1>Güvenli giriş kullanılamıyor</h1>
+          <p>Üretim Supabase ayarları eksik veya geçersiz. Çalışma alanı kapalı.</p>
+          {environment.status === 'invalid' && <p>Kontrol edilecek alanlar: {environment.fields.join(', ')}.</p>}
+        </section>
+      </main>
+    )
+  }
+
+  const workspace = <TestPaymentsProvider><Workspace environment={environment} authConfig={authConfig} /></TestPaymentsProvider>
+
+  return authConfig
+    ? <Suspense fallback={<p role="status">Oturum kontrol ediliyor…</p>}><AuthGate config={authConfig}>{workspace}</AuthGate></Suspense>
+    : workspace
 }
