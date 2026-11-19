@@ -31,8 +31,9 @@ Excel-like payment table rather than automated financial operations:
 | Durum | Dropdown: Ödendi / Ödenmedi |
 
 The interface supports creating, editing, and deleting payments, searchable
-and combined type/status/currency filters, desktop tables, mobile record cards,
-and a data-driven General Overview (`/overview`). TL is the default currency
+and combined type/status/currency/year/month filters (year and month use the
+due date), desktop tables, mobile record cards, and a data-driven General
+Overview (`/overview`). TL is the default currency
 for both new records and the initial table filter. New or edited records become
 visible by resetting other filters and selecting that record's currency.
 

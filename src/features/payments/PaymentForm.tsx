@@ -4,6 +4,7 @@ import { currencies, defaultCurrency } from '../../lib/currencies'
 import { tr } from '../../locales/tr'
 import { paymentInputSchema, type Payment, type PaymentInput } from './payment-model'
 import type { PaymentOrganization } from './payment-repository'
+import { TurkishDateInput } from './TurkishDateInput'
 
 type FormValues = { organizationId: string; detail: string; type: string; amount: string; currency: string; dueOn: string; paidOn: string; notes: string; status: string }
 type FormErrors = Partial<Record<keyof FormValues, string[]>>
@@ -86,13 +87,31 @@ export function PaymentForm({ original, organizations, busy, onSave, onCancel }:
             <select {...field('currency')}>{currencies.map(({ code, label }) => <option key={code} value={code}>{label}</option>)}</select>
             {error('currency')}
           </label>
-          <label className="form-field" htmlFor="payment-dueOn">{tr.payments.dueDate}
-            <input {...field('dueOn')} type="date" />
+          <label className="form-field">{tr.payments.dueDate}
+            <TurkishDateInput
+              id="payment-dueOn"
+              name="dueOn"
+              label={tr.payments.dueDate}
+              value={values.dueOn}
+              aria-invalid={Boolean(errors.dueOn)}
+              {...(errors.dueOn ? { 'aria-describedby': 'payment-dueOn-error' } : {})}
+              onChange={(dueOn) => setValues((current) => ({ ...current, dueOn }))}
+            />
             <span className="field-help">İsteğe bağlıdır.</span>
             {error('dueOn')}
           </label>
-          <label className="form-field" htmlFor="payment-paidOn">Gerçekleşen ödeme tarihi
-            <input {...field('paidOn')} type="date" disabled={values.status === 'unpaid'} required={values.status === 'paid'} />
+          <label className="form-field">Gerçekleşen ödeme tarihi
+            <TurkishDateInput
+              id="payment-paidOn"
+              name="paidOn"
+              label="Gerçekleşen ödeme tarihi"
+              value={values.paidOn}
+              disabled={values.status === 'unpaid'}
+              required={values.status === 'paid'}
+              aria-invalid={Boolean(errors.paidOn)}
+              {...(errors.paidOn ? { 'aria-describedby': 'payment-paidOn-error' } : {})}
+              onChange={(paidOn) => setValues((current) => ({ ...current, paidOn }))}
+            />
             <span className="field-help">Ödendi seçildiğinde zorunludur. Ödenmedi kayıtlarında boş bırakılır.</span>
             {error('paidOn')}
           </label>

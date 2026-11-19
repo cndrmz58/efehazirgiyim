@@ -68,12 +68,14 @@ export function summarizePayments(payments: readonly Payment[]) {
   })
 }
 
-export function filterPayments(payments: readonly Payment[], filters: { query: string; type: string; status: string; currency: string }) {
+export function filterPayments(payments: readonly Payment[], filters: { query: string; type: string; status: string; currency: string; year: string; month: string }) {
   const query = filters.query.trim().toLocaleLowerCase('tr-TR')
   return payments.filter((payment) =>
     (!filters.type || payment.type === filters.type) &&
     (!filters.status || payment.status === filters.status) &&
     (!filters.currency || payment.currency === filters.currency) &&
+    (!filters.year || payment.dueOn.startsWith(`${filters.year}-`)) &&
+    (!filters.month || payment.dueOn.slice(5, 7) === filters.month) &&
     (!query || `${payment.detail} ${payment.notes}`.toLocaleLowerCase('tr-TR').includes(query)),
   )
 }

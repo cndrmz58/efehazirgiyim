@@ -7,16 +7,17 @@ test.beforeEach(async ({ context, page }) => {
   await signIn(page)
 })
 
-async function addPayment(page: Page, detail: string, amount: string, currency: string, type: string, paid = false) {
+async function addPayment(page: Page, detail: string, amount: string, currency: string, type: string, paid = false, dueOn = '') {
   await page.getByRole('button', { name: 'Ödeme Ekle' }).click()
   const form = page.getByRole('form', { name: 'Ödeme formu' })
   await form.locator('#payment-detail').fill(detail)
   await form.locator('#payment-amount').fill(amount)
   await form.locator('#payment-currency').selectOption(currency)
   await form.locator('#payment-type').selectOption(type)
+  if (dueOn) await form.locator('#payment-dueOn').fill(dueOn)
   if (paid) {
     await form.locator('#payment-status').selectOption('paid')
-    await form.locator('#payment-paidOn').fill('2026-11-18')
+    await form.locator('#payment-paidOn').fill('18.11.2026')
   }
   await form.getByRole('button', { name: 'Ödemeyi kaydet' }).click()
   await expect(form).toBeHidden()
@@ -28,10 +29,10 @@ test('vade tarihi tutardan sonra gösterilir ve gerçekleşen tarihten bağıms�
   const record = list.getByRole(isMobile ? 'article' : 'row').filter({ hasText: 'Vadeli örnek' })
   await record.getByRole('button', { name: 'Ödemeyi düzenle: Vadeli örnek' }).click()
   const form = page.getByRole('form', { name: 'Ödeme formu' })
-  await form.locator('#payment-dueOn').fill('2026-11-30')
+  await form.locator('#payment-dueOn').fill('30.11.2026')
   await form.locator('#payment-status').selectOption('unpaid')
   await expect(form.locator('#payment-paidOn')).toHaveValue('')
-  await expect(form.locator('#payment-dueOn')).toHaveValue('2026-11-30')
+  await expect(form.locator('#payment-dueOn')).toHaveValue('30.11.2026')
   await form.getByRole('button', { name: 'Değişiklikleri kaydet' }).click()
   await expect(form).toBeHidden()
   await page.reload()
@@ -45,7 +46,25 @@ test('vade tarihi tutardan sonra gösterilir ve gerçekleşen tarihten bağıms�
     await expect(record.getByText('Vade Tarihi', { exact: true }).locator('..')).toContainText('30.11.2026')
   }
   await record.getByRole('button', { name: 'Ödemeyi düzenle: Vadeli örnek' }).click()
-  await expect(form.locator('#payment-dueOn')).toHaveValue('2026-11-30')
+  await expect(form.locator('#payment-dueOn')).toHaveValue('30.11.2026')
+})
+
+test('yıl ve ay filtreleri vade tarihine göre birlikte çalışır', async ({ page, isMobile }) => {
+  await addPayment(page, 'Kasım 2025', '10', 'TRY', 'invoice', false, '30.11.2025')
+  await addPayment(page, 'Kasım 2026', '10', 'TRY', 'invoice', false, '30.11.2026')
+  await addPayment(page, 'Ekim 2025', '10', 'TRY', 'invoice', false, '30.10.2025')
+
+  const filters = page.getByRole('search', { name: 'Ödemeleri filtrele' })
+  const list = isMobile ? page.getByLabel('Mobil ödeme listesi') : page.getByRole('table')
+  await filters.getByRole('combobox', { name: 'Vade yılı' }).selectOption('2025')
+  await filters.getByRole('combobox', { name: 'Vade ayı' }).selectOption('11')
+  await expect(list.getByText('Kasım 2025', { exact: true })).toBeVisible()
+  await expect(list.getByText('Kasım 2026', { exact: true })).toBeHidden()
+  await expect(list.getByText('Ekim 2025', { exact: true })).toBeHidden()
+
+  await page.getByRole('button', { name: 'Filtreleri temizle' }).click()
+  await expect(list.getByText('Kasım 2026', { exact: true })).toBeVisible()
+  await expect(list.getByText('Ekim 2025', { exact: true })).toBeVisible()
 })
 
 test('ödemeler kalıcıdır; düzenleme, filtreler, dashboard ve silme aynı veriyi kullanır', async ({ page, isMobile }) => {
@@ -85,7 +104,7 @@ test('ödemeler kalıcıdır; düzenleme, filtreler, dashboard ve silme aynı ve
   await form.locator('#payment-status').selectOption('paid')
   await form.getByRole('button', { name: 'Değişiklikleri kaydet' }).click()
   await expect(form.getByRole('alert')).toContainText('İşaretli alanları kontrol edin')
-  await form.locator('#payment-paidOn').fill('2026-11-18')
+  await form.locator('#payment-paidOn').fill('18.11.2026')
   await form.locator('#payment-amount').fill('0,40')
   await form.getByRole('button', { name: 'Değişiklikleri kaydet' }).click()
   await expect(form).toBeHidden()

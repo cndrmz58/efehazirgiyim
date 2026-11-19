@@ -45,7 +45,20 @@ describe('ödeme doğrulaması ve özetleri', () => {
   it('Türkçe aramayı tür, durum ve para birimi filtreleriyle birleştirir', () => {
     const matching = payment({ detail: 'FATURA İŞLEMİ', notes: 'ÖRNEK', type: 'invoice' })
     const records = [matching, payment({ detail: 'FATURA İŞLEMİ', currency: 'EUR' }), payment({ type: 'tax' })]
-    expect(filterPayments(records, { query: 'işlemi örnek', type: 'invoice', status: 'unpaid', currency: 'TRY' })).toEqual([matching])
+    expect(filterPayments(records, { query: 'işlemi örnek', type: 'invoice', status: 'unpaid', currency: 'TRY', year: '', month: '' })).toEqual([matching])
+  })
+
+  it('vade yılı ve ayını birlikte veya ayrı ayrı filtreler; vadesiz kayıtları tarih seçilince hariç tutar', () => {
+    const november2025 = payment({ detail: 'Kasım 2025', dueOn: '2025-11-30' })
+    const november2026 = payment({ detail: 'Kasım 2026', dueOn: '2026-11-30' })
+    const october2025 = payment({ detail: 'Ekim 2025', dueOn: '2025-10-30' })
+    const noDueDate = payment({ detail: 'Vadesiz' })
+    const records = [november2025, november2026, october2025, noDueDate]
+    const commonFilters = { query: '', type: '', status: '', currency: '', year: '', month: '' }
+
+    expect(filterPayments(records, { ...commonFilters, year: '2025' })).toEqual([november2025, october2025])
+    expect(filterPayments(records, { ...commonFilters, month: '11' })).toEqual([november2025, november2026])
+    expect(filterPayments(records, { ...commonFilters, year: '2025', month: '11' })).toEqual([november2025])
   })
 
   it('ödenen tutar oranını ve en son gerçekleşen tarihi para birimine göre hesaplar', () => {

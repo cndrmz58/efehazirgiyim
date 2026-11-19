@@ -92,6 +92,27 @@ describe('Supabase ödeme tablosu', () => {
     expect(screen.getByRole('searchbox', { name: 'Ödeme ara' })).toHaveValue('')
   })
 
+  it('vade yılı ve ayına göre filtreler ve tarih filtrelerini sıfırlar', async () => {
+    const user = userEvent.setup()
+    renderPage(workspace('viewer', [
+      row({ detail: 'Kasım 2025', due_on: '2025-11-30' }),
+      row({ id: '00000000-0000-4000-8000-000000000032', detail: 'Kasım 2026', due_on: '2026-11-30' }),
+      row({ id: '00000000-0000-4000-8000-000000000033', detail: 'Ekim 2025', due_on: '2025-10-30' }),
+    ]))
+
+    await screen.findByRole('table')
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Vade yılı' }), '2025')
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Vade ayı' }), '11')
+
+    expect(screen.getByRole('table')).toHaveTextContent('Kasım 2025')
+    expect(screen.getByRole('table')).not.toHaveTextContent('Kasım 2026')
+    expect(screen.getByRole('table')).not.toHaveTextContent('Ekim 2025')
+
+    await user.click(screen.getByRole('button', { name: 'Filtreleri temizle' }))
+    expect(screen.getByRole('combobox', { name: 'Vade yılı' })).toHaveValue('')
+    expect(screen.getByRole('combobox', { name: 'Vade ayı' })).toHaveValue('')
+  })
+
   it('ödeme rolü olmayan üyeyi kayıt eklemeye yetkili saymaz', async () => {
     renderPage(workspace(null, []))
 

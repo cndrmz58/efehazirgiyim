@@ -104,6 +104,21 @@ td { padding: 0; }
 .form-field textarea { resize: vertical; }
 .form-field input:disabled { background: #f0f3f1; }
 .form-field [aria-invalid="true"] { border-color: #b94a36; }
+.date-control { position: relative; }
+.date-control input { padding-right: 48px; }
+.date-control-trigger { position: absolute; top: 0; right: 0; display: grid; width: 44px; height: 44px; place-items: center; border: 0; border-radius: 6px; background: transparent; color: #23332d; }
+.date-control-trigger:focus-visible, .date-picker button:focus-visible { outline: 2px solid #28523b; outline-offset: 2px; }
+.date-picker { position: absolute; z-index: 20; top: calc(100% + 6px); right: 0; width: min(320px, calc(100vw - 48px)); padding: 12px; border: 1px solid #cddbd1; border-radius: 8px; background: white; box-shadow: 0 8px 24px rgb(25 50 38 / 16%); }
+.date-picker-heading { display: flex; align-items: center; justify-content: space-between; min-height: 36px; margin-bottom: 8px; text-transform: capitalize; }
+.date-picker-heading strong { font-size: 13px; font-weight: 650; }
+.date-picker-nav { display: grid; width: 36px; height: 36px; place-items: center; border: 0; border-radius: 5px; background: transparent; color: #28523b; }
+.date-picker-grid { display: grid; gap: 2px; }
+.date-picker-weekdays, .date-picker-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.date-picker-weekday { display: grid; min-height: 32px; place-items: center; color: #65746d; font-size: 10px; font-weight: 600; text-transform: capitalize; }
+.date-picker-day { min-height: 34px; border: 0; border-radius: 5px; background: transparent; color: #23332d; font-size: 12px; }
+.date-picker-day:hover, .date-picker-day[aria-pressed="true"] { background: #e7f2e9; color: #20583b; font-weight: 650; }
+.date-picker-day[aria-current="date"] { outline: 1px solid #8da99a; outline-offset: -2px; }
+.date-picker-day-outside { color: #9ba69f; }
 .field-help { font-size: 11px; font-weight: 400; color: #65746d; line-height: 1.6; }
 .form-error { display: block; color: #a12e21; font-size: 12px; line-height: 1.7; font-weight: 500; margin-top: 8px; overflow-wrap: anywhere; }
 .form-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }

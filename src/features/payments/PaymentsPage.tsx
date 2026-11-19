@@ -7,6 +7,7 @@ import { filterPayments, formatMoney, toMinorUnits, type Payment, type PaymentIn
 import { usePayments } from './payment-store'
 
 const labels = tr.payments
+const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık']
 
 function displayDate(date: string) {
   return date ? <time dateTime={date}>{date.split('-').reverse().join('.')}</time> : '—'
@@ -19,17 +20,22 @@ export function PaymentsPage() {
   const [type, setType] = useState('')
   const [status, setStatus] = useState('')
   const [currency, setCurrency] = useState<string>(defaultCurrency)
-  const filtered = Boolean(query || type || status || currency !== defaultCurrency)
+  const [year, setYear] = useState('')
+  const [month, setMonth] = useState('')
+  const filtered = Boolean(query || type || status || currency !== defaultCurrency || year || month)
   const payments = store.payments
+  const years = [...new Set(payments.map(({ dueOn }) => dueOn.slice(0, 4)).filter(Boolean))].sort((left, right) => right.localeCompare(left))
   const organizations = new Map(store.organizations.map((organization) => [organization.id, organization]))
   const ready = store.status === 'ready'
-  const visible = filterPayments(payments, { query, type, status, currency })
+  const visible = filterPayments(payments, { query, type, status, currency, year, month })
 
   function clearFilters() {
     setQuery('')
     setType('')
     setStatus('')
     setCurrency(defaultCurrency)
+    setYear('')
+    setMonth('')
   }
 
   async function save(input: PaymentInput) {
@@ -125,6 +131,23 @@ export function PaymentsPage() {
             <select value={currency} onChange={(event) => setCurrency(event.target.value)}>
               <option value="">Tüm para birimleri</option>
               {currencies.map(({ code, label }) => <option key={code} value={code}>{label}</option>)}
+            </select>
+          </label>
+          <label className="filter-field">
+            <span>Vade yılı</span>
+            <select value={year} onChange={(event) => setYear(event.target.value)}>
+              <option value="">Tüm yıllar</option>
+              {years.map((option) => <option key={option} value={option}>{option}</option>)}
+            </select>
+          </label>
+          <label className="filter-field">
+            <span>Vade ayı</span>
+            <select value={month} onChange={(event) => setMonth(event.target.value)}>
+              <option value="">Tüm aylar</option>
+              {months.map((label, index) => {
+                const value = String(index + 1).padStart(2, '0')
+                return <option key={value} value={value}>{label}</option>
+              })}
             </select>
           </label>
           {filtered && <button className="button-text filter-reset" type="button" onClick={clearFilters}>Filtreleri temizle</button>}
