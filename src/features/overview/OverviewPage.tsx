@@ -67,6 +67,74 @@ export function OverviewPage() {
         <div><p className="eyebrow">ÖDEME KAYITLARINA GÖRE</p><h1>Genel Bakış</h1><p className="page-description">Erişiminiz olan şirketlerdeki elle girilmiş ödeme kayıtlarının özeti. Tutarlar Kalan alanından, kayıt sayıları Durum seçiminden hesaplanır; banka bakiyesi değildir.</p></div>
         <Link className="button-secondary" to="/payments">Ödeme tablosuna git</Link>
       </header>
+      {store.status === 'ready' && (
+        <section className="settings-card paid-trend" aria-labelledby="paid-trend-heading">
+          <div className="paid-trend-heading">
+            <div>
+              <h2 id="paid-trend-heading">Ödenen tutar eğilimi</h2>
+              <p className="page-description">
+                {year ? `${year} yılı aylarına göre` : month ? `${months[Number(month) - 1]} ayının yıllara göre` : 'Yıllara göre'}
+                {' · '}Gerçekleşen ödeme tarihi
+              </p>
+            </div>
+            <div className="paid-trend-filters">
+              <label className="filter-field">
+                <span>Para birimi</span>
+                <select value={currency} onChange={(event) => {
+                  const selected = currencies.find(({ code }) => code === event.target.value)
+                  if (selected) setCurrency(selected.code)
+                }}>
+                  {currencies.map(({ code, label }) => <option key={code} value={code}>{label}</option>)}
+                </select>
+              </label>
+              <label className="filter-field">
+                <span>Gerçekleşen ödeme yılı</span>
+                <select value={year} onChange={(event) => setYear(event.target.value)}>
+                  <option value="">Tüm yıllar</option>
+                  {years.map((option) => <option key={option} value={option}>{option}</option>)}
+                </select>
+              </label>
+              <label className="filter-field">
+                <span>Ay filtresi</span>
+                <select value={month} onChange={(event) => setMonth(event.target.value)}>
+                  <option value="">Tüm aylar</option>
+                  {months.map((label, index) => {
+                    const value = String(index + 1).padStart(2, '0')
+                    return <option key={value} value={value}>{label}</option>
+                  })}
+                </select>
+              </label>
+            </div>
+          </div>
+          <p className="field-help paid-trend-note">
+            Kısmi ödemelerde tutar, toplam tutar ile kalan tutar farkıdır; kayıttaki gerçekleşen ödeme tarihine göre gruplanır.
+          </p>
+          {maxAmount === 0n ? (
+            <p className="paid-trend-empty">Seçilen para birimi ve dönemde gerçekleşen ödeme yok.</p>
+          ) : (
+            <>
+              <div className="trend-columns" role="list" aria-label={`${currency} cinsinden dönemlere göre ödenen tutarlar`} data-dense={periods.length > 6}>
+                {periods.map(({ period, amount }) => {
+                  const height = amount > 0n ? Math.max(Number((amount * 1000n) / maxAmount) / 10, 2) : 0
+                  return (
+                    <div role="listitem" className="trend-column" key={period} aria-label={`${periodLabel(period, false)}: ${formatMoney(amount, currency)}`} title={`${periodLabel(period, false)}: ${formatMoney(amount, currency)}`}>
+                      <span className="trend-column-area" aria-hidden="true">
+                        {amount > 0n && <span className="trend-column-value" style={{ bottom: `calc(${height}% + 4px)` }}>{formatMoney(amount, currency)}</span>}
+                        <span className="trend-column-bar" style={{ height: `${height}%` }} />
+                      </span>
+                      <span className="trend-column-label" aria-hidden="true">{periodLabel(period, true)}</span>
+                    </div>
+                  )
+                })}
+              </div>
+              <dl className="trend-stats">
+                <div><dt>Dönem toplamı</dt><dd>{formatMoney(paidTotal, currency)}</dd></div>
+                <div><dt>En yüksek dönem</dt><dd>{periodLabel(peak.period, false)} · {formatMoney(peak.amount, currency)}</dd></div>
+              </dl>
+            </>
+          )}
+        </section>
+      )}
       {store.status === 'unconfigured' ? (
         <section className="settings-card"><h2>Veri bağlantısı yapılandırılmadı</h2><p className="page-description">Özet için Supabase bağlantı ayarları gerekir.</p></section>
       ) : store.status === 'loading' ? (
@@ -122,72 +190,6 @@ export function OverviewPage() {
                 </dl>
               </article>
             ))}
-          </section>
-          <section className="settings-card paid-trend" aria-labelledby="paid-trend-heading">
-            <div className="paid-trend-heading">
-              <div>
-                <h2 id="paid-trend-heading">Ödenen tutar eğilimi</h2>
-                <p className="page-description">
-                  {year ? `${year} yılı aylarına göre` : month ? `${months[Number(month) - 1]} ayının yıllara göre` : 'Yıllara göre'}
-                  {' · '}Gerçekleşen ödeme tarihi
-                </p>
-              </div>
-              <div className="paid-trend-filters">
-                <label className="filter-field">
-                  <span>Para birimi</span>
-                  <select value={currency} onChange={(event) => {
-                    const selected = currencies.find(({ code }) => code === event.target.value)
-                    if (selected) setCurrency(selected.code)
-                  }}>
-                    {currencies.map(({ code, label }) => <option key={code} value={code}>{label}</option>)}
-                  </select>
-                </label>
-                <label className="filter-field">
-                  <span>Gerçekleşen ödeme yılı</span>
-                  <select value={year} onChange={(event) => setYear(event.target.value)}>
-                    <option value="">Tüm yıllar</option>
-                    {years.map((option) => <option key={option} value={option}>{option}</option>)}
-                  </select>
-                </label>
-                <label className="filter-field">
-                  <span>Ay filtresi</span>
-                  <select value={month} onChange={(event) => setMonth(event.target.value)}>
-                    <option value="">Tüm aylar</option>
-                    {months.map((label, index) => {
-                      const value = String(index + 1).padStart(2, '0')
-                      return <option key={value} value={value}>{label}</option>
-                    })}
-                  </select>
-                </label>
-              </div>
-            </div>
-            <p className="field-help paid-trend-note">
-              Kısmi ödemelerde tutar, toplam tutar ile kalan tutar farkıdır; kayıttaki gerçekleşen ödeme tarihine göre gruplanır.
-            </p>
-            {maxAmount === 0n ? (
-              <p className="paid-trend-empty">Seçilen para birimi ve dönemde gerçekleşen ödeme yok.</p>
-            ) : (
-              <>
-                <div className="trend-columns" role="list" aria-label={`${currency} cinsinden dönemlere göre ödenen tutarlar`} data-dense={periods.length > 6}>
-                  {periods.map(({ period, amount }) => {
-                    const height = amount > 0n ? Math.max(Number((amount * 1000n) / maxAmount) / 10, 2) : 0
-                    return (
-                      <div role="listitem" className="trend-column" key={period} aria-label={`${periodLabel(period, false)}: ${formatMoney(amount, currency)}`} title={`${periodLabel(period, false)}: ${formatMoney(amount, currency)}`}>
-                        <span className="trend-column-area" aria-hidden="true">
-                          {amount > 0n && <span className="trend-column-value" style={{ bottom: `calc(${height}% + 4px)` }}>{formatMoney(amount, currency)}</span>}
-                          <span className="trend-column-bar" style={{ height: `${height}%` }} />
-                        </span>
-                        <span className="trend-column-label" aria-hidden="true">{periodLabel(period, true)}</span>
-                      </div>
-                    )
-                  })}
-                </div>
-                <dl className="trend-stats">
-                  <div><dt>Dönem toplamı</dt><dd>{formatMoney(paidTotal, currency)}</dd></div>
-                  <div><dt>En yüksek dönem</dt><dd>{periodLabel(peak.period, false)} · {formatMoney(peak.amount, currency)}</dd></div>
-                </dl>
-              </>
-            )}
           </section>
           <section className="settings-card type-distribution" aria-labelledby="type-distribution-heading">
             <h2 id="type-distribution-heading">Ödeme türü dağılımı</h2>
