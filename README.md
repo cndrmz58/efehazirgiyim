@@ -35,12 +35,16 @@ Excel-like payment table rather than automated financial operations:
 The interface supports creating, editing, and deleting payments, searchable
 and combined type/status/currency/year/month filters (year and month use the
 due date), desktop tables, mobile record cards, and a data-driven General
-Overview (`/overview`). TL is the default currency
+Overview (`/overview`). The **Firmalar** (`/firms`) directory is an explicitly
+approved UI-only prototype: it contains no sample companies, does not persist
+firm data, and keeps adding firms unavailable until its backend is approved and
+implemented. TL is the default currency
 for both new records and the initial table filter. New or edited records become
 visible by resetting other filters and selecting that record's currency.
 
-Only **Ödemeler** and **Genel Bakış** are selectable in the sidebar. The
-other entries, including **Ayarlar**, are visible but disabled.
+**Ödemeler**, **Genel Bakış**, and the UI-only **Firmalar** directory are
+selectable in the sidebar. The other entries, including **Ayarlar**, remain
+visible but disabled.
 
 ### Using the payment table
 

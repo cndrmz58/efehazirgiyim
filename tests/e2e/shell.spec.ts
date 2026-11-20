@@ -23,7 +23,7 @@ test('üretim çıktısında tablo ve gezinme ekran boyutuna uyum sağlar', asyn
     await expect(menu).toBeVisible()
   }
 
-  await expect(menu.getByRole('link')).toHaveText(['Genel Bakış', 'Ödemeler'])
+  await expect(menu.getByRole('link')).toHaveText(['Genel Bakış', 'Ödemeler', 'Firmalar'])
   const settings = menu.getByRole('button', { name: 'Ayarlar' })
   await expect(settings).toBeVisible()
   await expect(settings).toBeDisabled()
@@ -35,8 +35,13 @@ test('üretim çıktısında tablo ve gezinme ekran boyutuna uyum sağlar', asyn
   if (isMobile) await expect(menu).toBeHidden()
 
   if (isMobile) await page.getByRole('button', { name: 'Menüyü aç' }).click()
+  await menu.getByRole('link', { name: 'Firmalar' }).click()
+  await expect(page).toHaveURL('/firms')
+  await expect(page.getByRole('heading', { name: 'Henüz firma kaydı yok' })).toBeVisible()
+  if (isMobile) await page.getByRole('button', { name: 'Menüyü aç' }).click()
   const payments = menu.getByRole('link', { name: 'Ödemeler' })
   await payments.focus()
+  await page.keyboard.press('Tab')
   await page.keyboard.press('Tab')
   await expect(menu.locator(':focus')).toHaveCount(0)
   await payments.click()

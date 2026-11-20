@@ -6,7 +6,7 @@ export const tr = {
     payments: 'Ödemeler',
     collections: 'Tahsilatlar',
     calendar: 'Takvim',
-    contacts: 'İş Ortakları',
+    firms: 'Firmalar',
     departments: 'Departmanlar',
     documents: 'Belgeler',
     users: 'Kullanıcı Yönetimi',

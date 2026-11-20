@@ -42,6 +42,22 @@ h1, h2, h3, p { margin: 0; }
 .workspace { flex: 1; min-width: 0; }
 .workspace-header { min-height: 76px; padding: 20px 36px; border-bottom: 1px solid #e3e8e5; background: #fff; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .workspace-header > span:first-child { font-size: 12px; color: #65756c; display: flex; align-items: center; gap: 10px; }
+.account-menu { position: relative; margin-left: auto; }
+.account-menu summary { list-style: none; }
+.account-menu summary::-webkit-details-marker { display: none; }
+.account-trigger { display: flex; align-items: center; gap: 9px; min-height: 44px; padding: 4px 10px 4px 5px; border: 1px solid #dfe7e2; border-radius: 7px; background: white; color: #31483b; cursor: pointer; }
+.account-avatar { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 6px; background: #e8f1ec; color: #28603d; flex-shrink: 0; }
+.account-trigger-copy { display: flex; min-width: 0; flex-direction: column; align-items: flex-start; gap: 2px; }
+.account-trigger-copy > span { color: #65746d; font-size: 9px; }
+.account-trigger-copy strong { max-width: 190px; overflow: hidden; color: #23332d; font-size: 11px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.account-chevron { color: #65746d; transition: transform .15s ease; }
+.account-menu[open] .account-chevron { transform: rotate(180deg); }
+.account-popover { position: absolute; z-index: 40; top: calc(100% + 8px); right: 0; width: min(280px, calc(100vw - 32px)); padding: 16px; border: 1px solid #dfe7e2; border-radius: 8px; background: white; box-shadow: 0 12px 30px #183c341c; }
+.account-menu-label { color: #6b7d72; font-size: 9px; font-weight: 700; }
+.account-email { margin-top: 6px; overflow-wrap: anywhere; color: #23332d; font-size: 12px; font-weight: 600; }
+.account-logout { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 42px; margin-top: 14px; padding: 0 10px; border: 1px solid #e5e9e6; border-radius: 6px; background: #fff; color: #8d392f; font-size: 12px; font-weight: 600; text-align: left; }
+.account-logout:hover { background: #fff5f3; }
+.account-logout:disabled { opacity: .6; }
 .development-badge { border: 1px solid #dfe7e2; color: #62726a; background: #f7faf8; border-radius: 20px; padding: 5px 10px; font-size: 10px; white-space: nowrap; }
 main { max-width: 1660px; margin: auto; padding: 27px 36px 22px; }
 .setup-notice { display: flex; align-items: flex-start; gap: 11px; border: 1px solid #dbe5e1; border-radius: 8px; background: #edf4f0; padding: 13px 16px; color: #365447; font-size: 12px; line-height: 1.7; margin-bottom: 32px; }
@@ -180,10 +196,11 @@ td { padding: 0; }
 .paid-progress { height: 8px; border-radius: 4px; background: #edf1ee; overflow: hidden; margin-top: 16px; }
 .paid-progress span { display: block; height: 100%; max-width: 100%; border-radius: 4px; background: linear-gradient(90deg, #2e7d4f, #44966a); }
 .paid-trend { margin-bottom: 24px; }
-.paid-trend-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; flex-wrap: wrap; }
-.paid-trend-filters { display: flex; gap: 12px; flex-wrap: wrap; }
-.paid-trend-filters .filter-field { flex-basis: 145px; }
-.paid-trend-note { margin-top: 16px; }
+.paid-trend-heading { display: grid; gap: 18px; }
+.paid-trend-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; width: min(100%, 760px); }
+.paid-trend-filters .filter-field { min-width: 0; }
+.paid-trend-filters .filter-field select { width: 100%; min-height: 44px; font-size: 12px; }
+.paid-trend-note { margin-top: 18px; border-top: 1px solid #edf0ed; padding-top: 15px; }
 .trend-columns { display: flex; gap: 10px; margin-top: 10px; overflow-x: auto; padding: 18px 0 2px; }
 .trend-column { flex: 1 1 0; min-width: 36px; display: flex; flex-direction: column; align-items: center; }
 .trend-column-area { position: relative; width: 100%; height: 150px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; border-bottom: 1px solid #e3e9e4; }
@@ -196,6 +213,14 @@ td { padding: 0; }
 .trend-stats dd { margin: 6px 0 0; font-size: 14px; font-weight: 650; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .paid-trend-empty { margin-top: 22px; color: #65746d; font-size: 12px; }
 .distribution-share { text-align: right; color: #65746d; font-variant-numeric: tabular-nums; }
+.firm-add-button { flex-shrink: 0; }
+.firm-directory { overflow: hidden; }
+.firm-directory th { width: 25%; }
+.firm-empty-state { min-height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; text-align: center; }
+.firm-empty-icon { width: 54px; height: 54px; display: grid; place-items: center; margin-bottom: 16px; border: 1px solid #dfe8e1; border-radius: 10px; background: #f0f5f1; color: #557462; }
+.firm-empty-state h3 { color: #354c3e; font-size: 14px; font-weight: 650; }
+.firm-empty-state p { margin-top: 7px; color: #65746d; font-size: 12px; line-height: 1.7; }
+.firm-backend-note { margin-top: 12px; }
 
 @media (min-width: 1440px) {
   main { padding: 35px 48px; }
@@ -208,6 +233,7 @@ td { padding: 0; }
   .brand-name { font-size: 11px; }
   .filter-field { flex: 1 1 140px; }
   .search-field { flex-basis: 100%; }
+  .paid-trend-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .currency-summary-grid { grid-template-columns: 1fr; }
   .currency-summary dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 }
@@ -245,6 +271,7 @@ td { padding: 0; }
   .setup-notice { font-size: 11px; margin-bottom: 25px; }
   .page-heading { align-items: flex-start; flex-direction: column; margin-bottom: 22px; }
   .page-heading > div:last-child:has(.button-primary) { width: 100%; }
+  .firm-add-button { width: 100%; }
   .button-primary { width: 100%; }
   .table-card-heading { padding: 18px 16px; flex-wrap: wrap; }
   .table-filters { padding: 16px; gap: 14px 10px; }
@@ -275,6 +302,7 @@ td { padding: 0; }
   .status-summary dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .currency-summary dd { font-size: 22px; }
   .due-grid { grid-template-columns: 1fr; gap: 14px; }
+  .paid-trend-filters { grid-template-columns: 1fr; }
   .trend-column { min-width: 30px; }
   .trend-column-value { display: none; }
   .trend-stats { gap: 12px 24px; }

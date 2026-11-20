@@ -24,6 +24,7 @@ describe('Türkçe ödeme çalışma alanı', () => {
 
     expect(screen.getByRole('heading', { name: 'Ödemeler', level: 1 })).toBeVisible()
     expect(screen.getByRole('button', { name: 'Ödeme Ekle' })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: /Oturumum/ })).not.toBeInTheDocument()
     expect(screen.getByRole('note')).toHaveTextContent('Veri bağlantısı yapılandırılmadı')
     expect(screen.getByRole('heading', { name: 'Veri bağlantısı yapılandırılmadı' })).toBeVisible()
   })
@@ -36,8 +37,8 @@ describe('Türkçe ödeme çalışma alanı', () => {
     await user.click(screen.getByRole('button', { name: 'Menüyü aç' }))
     expect(screen.getByRole('button', { name: 'Menüyü kapat' })).toHaveAttribute('aria-expanded', 'true')
 
-    expect(menu.getAllByRole('link').map((link) => link.textContent)).toEqual(['Genel Bakış', 'Ödemeler'])
-    for (const name of ['Tahsilatlar', 'Takvim', 'İş Ortakları', 'Departmanlar', 'Belgeler', 'Kullanıcı Yönetimi', 'Ayarlar']) {
+    expect(menu.getAllByRole('link').map((link) => link.textContent)).toEqual(['Genel Bakış', 'Ödemeler', 'Firmalar'])
+    for (const name of ['Tahsilatlar', 'Takvim', 'Departmanlar', 'Belgeler', 'Kullanıcı Yönetimi', 'Ayarlar']) {
       const item = menu.getByRole('button', { name })
       expect(item).toBeDisabled()
       await user.click(item)
@@ -53,6 +54,16 @@ describe('Türkçe ödeme çalışma alanı', () => {
     await user.click(menu.getByRole('link', { name: 'Ödemeler' }))
     expect(screen.getByRole('button', { name: 'Menüyü aç' })).toHaveAttribute('aria-expanded', 'false')
     expect(screen.getByRole('heading', { name: 'Ödemeler', level: 1 })).toBeVisible()
+  })
+
+  it('Firmalar dizinini boş ve kayıt altyapısı olmadan açar', () => {
+    renderApp('/firms')
+
+    expect(screen.getByRole('heading', { name: 'Firmalar', level: 1 })).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Firmalar' })).toHaveClass('nav-link-active')
+    expect(screen.getByRole('heading', { name: 'Henüz firma kaydı yok' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Firma ekle' })).toBeDisabled()
+    expect(screen.getByText(/backend bağlantısı tamamlandığında açılacak/)).toBeVisible()
   })
 
   it('Ayarlar doğrudan açıldığında manuel kurun henüz çalışmadığını belirtir', () => {

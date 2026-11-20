@@ -9,7 +9,9 @@ collections as its product focus.
 The current frontend uses React, TypeScript, Vite, and Tailwind CSS, with
 Vercel hosting configuration and GitHub Actions CI. The approved delivery is
 a manual payment table, stored in Supabase behind login, with a per-currency
-overview. The former browser-local test mode was removed at the owner's request.
+overview. A UI-only Firmalar directory prototype was explicitly approved on
+2026-11-20; it has no persistence or backend and must not show sample companies.
+The former browser-local test mode was removed at the owner's request.
 
 The Supabase foundation includes browser auth flows and versioned PostgreSQL
 RLS migrations for organization/department access and organization-scoped,
@@ -226,9 +228,12 @@ The initial product scope is a roadmap, not a single implementation task:
 8. Document management.
 
 The **current narrower delivery** remains the Supabase-backed manual payment
-table described in the README. Wait for explicit user
-approval before beginning further application development or expanding the
-approved milestone. A roadmap entry alone is not authorization.
+table described in the README, with the explicitly approved UI-only Firmalar
+directory prototype. Firm persistence, search, editing, or use in payment
+workflows remains deferred until the user approves its data contract and
+backend. Wait for explicit user approval before further application
+development or expanding the approved milestone. A roadmap entry alone is not
+authorization.
 
 Dropbox integration, Excel automation, AI document processing, OpenAI,
 financial dashboards, and accounting software integrations are deferred.
