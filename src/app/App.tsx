@@ -2,7 +2,7 @@ import {
   ArrowDownLeft, ArrowUpRight, Building2, CalendarDays, ChevronRight,
   CircleHelp, Files, LayoutGrid, Menu, Settings, ShieldCheck, Users, X,
 } from 'lucide-react'
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Link, Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import { SetupNotice } from '../components/SetupNotice'
 import { PaymentsPage } from '../features/payments/PaymentsPage'
@@ -44,7 +44,24 @@ function PlannedPage({ title }: { title: string }) {
 
 function Workspace({ environment, authConfig }: { environment: EnvironmentState; authConfig: AuthConfig | null }) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const menuButton = useRef<HTMLButtonElement>(null)
   const { pathname } = useLocation()
+
+  useEffect(() => {
+    if (!menuOpen) return undefined
+    document.body.classList.add('menu-open')
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false)
+        menuButton.current?.focus()
+      }
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.body.classList.remove('menu-open')
+      window.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [menuOpen])
 
   if (pathname === '/auth') return <Navigate to="/giris" replace />
   if (pathname === '/giris' || pathname === '/auth/callback') {
@@ -59,7 +76,7 @@ function Workspace({ environment, authConfig }: { environment: EnvironmentState;
       <a className="skip-link" href="#main-content">İçeriğe geç</a>
       <header className="mobile-header">
         <Link to="/payments" className="brand-link" onClick={() => setMenuOpen(false)}><span className="brand-mark">E</span><span>{tr.company}</span></Link>
-        <button type="button" className="icon-button" aria-label={menuOpen ? 'Menüyü kapat' : 'Menüyü aç'} aria-expanded={menuOpen} aria-controls="primary-navigation" onClick={() => setMenuOpen(!menuOpen)}>
+        <button ref={menuButton} type="button" className="icon-button" aria-label={menuOpen ? 'Menüyü kapat' : 'Menüyü aç'} aria-expanded={menuOpen} aria-controls="primary-navigation" onClick={() => setMenuOpen(!menuOpen)}>
           {menuOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
         </button>
       </header>
@@ -87,6 +104,7 @@ function Workspace({ environment, authConfig }: { environment: EnvironmentState;
           <div><p>Yardım</p><span>Erişim ve yetki için yöneticinize başvurun</span></div>
         </div>
       </aside>
+      {menuOpen && <div className="menu-backdrop" aria-hidden="true" onClick={() => setMenuOpen(false)} />}
 
       <div className="workspace">
         <div className="workspace-header">

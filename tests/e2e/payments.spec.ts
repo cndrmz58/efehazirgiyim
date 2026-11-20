@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
-import { mockSupabase, signIn } from './supabase-mock'
+import { mockSupabase, openFilters, signIn } from './supabase-mock'
 
 test.beforeEach(async ({ context, page }) => {
   await mockSupabase(context)
@@ -59,6 +59,7 @@ test('yıl ve ay filtreleri vade tarihine göre birlikte çalışır', async ({ 
 
   const filters = page.getByRole('search', { name: 'Ödemeleri filtrele' })
   const list = isMobile ? page.getByLabel('Mobil ödeme listesi') : page.getByRole('table')
+  await openFilters(page, isMobile)
   await filters.getByRole('combobox', { name: 'Vade yılı' }).selectOption('2025')
   await filters.getByRole('combobox', { name: 'Vade ayı' }).selectOption('11')
   await expect(list.getByText('Kasım 2025', { exact: true })).toBeVisible()
@@ -82,6 +83,7 @@ test('ödemeler kalıcıdır; düzenleme, filtreler, dashboard ve silme aynı ve
   await expect(list.getByText('Örnek fatura', { exact: true })).toBeVisible()
 
   const filters = page.getByRole('search', { name: 'Ödemeleri filtrele' })
+  await openFilters(page, isMobile)
   await filters.getByRole('combobox', { name: 'Durum', exact: true }).selectOption('paid')
   await expect(list.getByText('Örnek fatura', { exact: true })).toBeHidden()
   await filters.getByRole('combobox', { name: 'Durum', exact: true }).selectOption('')
@@ -133,6 +135,7 @@ test('yeni ödeme türleri saklanır ve genel bakışta özetlenir', async ({ pa
 
   const filters = page.getByRole('search', { name: 'Ödemeleri filtrele' })
   const list = isMobile ? page.getByLabel('Mobil ödeme listesi') : page.getByRole('table')
+  await openFilters(page, isMobile)
   await filters.getByRole('combobox', { name: 'Ödeme türü' }).selectOption({ label: 'Diğer' })
   await expect(list.getByText('Diğer örnek', { exact: true })).toBeVisible()
   await expect(list.getByText('Maaş örneği', { exact: true })).toBeHidden()

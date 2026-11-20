@@ -1,4 +1,4 @@
-import { ArrowDownUp, Plus, RefreshCw, Search, Table2 } from 'lucide-react'
+import { ArrowDownUp, Plus, RefreshCw, Search, SlidersHorizontal, Table2 } from 'lucide-react'
 import { useState } from 'react'
 import { currencies, defaultCurrency } from '../../lib/currencies'
 import { tr } from '../../locales/tr'
@@ -22,6 +22,8 @@ export function PaymentsPage() {
   const [currency, setCurrency] = useState<string>(defaultCurrency)
   const [year, setYear] = useState('')
   const [month, setMonth] = useState('')
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const activeFilterCount = [type, status, year, month].filter(Boolean).length + (currency !== defaultCurrency ? 1 : 0)
   const filtered = Boolean(query || type || status || currency !== defaultCurrency || year || month)
   const payments = store.payments
   const years = [...new Set(payments.map(({ dueOn }) => dueOn.slice(0, 4)).filter(Boolean))].sort((left, right) => right.localeCompare(left))
@@ -112,6 +114,10 @@ export function PaymentsPage() {
             <Search size={18} aria-hidden="true" />
             <input type="search" placeholder="Ödeme veya açıklama ara…" value={query} onChange={(event) => setQuery(event.target.value)} />
           </label>
+          <button type="button" className="button-secondary filter-toggle" aria-expanded={filtersOpen} aria-controls="payment-filter-fields" onClick={() => setFiltersOpen(!filtersOpen)}>
+            <SlidersHorizontal size={16} aria-hidden="true" /> Filtreler{activeFilterCount > 0 && ` (${activeFilterCount})`}
+          </button>
+          <div id="payment-filter-fields" className={`filter-fields ${filtersOpen ? '' : 'filter-fields-closed'}`}>
           <label className="filter-field">
             <span>Ödeme türü</span>
             <select value={type} onChange={(event) => setType(event.target.value)}>
@@ -151,6 +157,7 @@ export function PaymentsPage() {
             </select>
           </label>
           {filtered && <button className="button-text filter-reset" type="button" onClick={clearFilters}>Filtreleri temizle</button>}
+          </div>
         </form>
 
         <div className={`table-scroll ${visible.length ? 'populated-payment-table' : ''}`} tabIndex={0} role="region" aria-label="Yatay kaydırılabilir ödeme tablosu">

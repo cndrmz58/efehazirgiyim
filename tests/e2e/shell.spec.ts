@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { mockSupabase, signIn } from './supabase-mock'
+import { mockSupabase, openFilters, signIn } from './supabase-mock'
 
 test('oturum açılmadan çalışma alanı gösterilmez', async ({ context, page }) => {
   await mockSupabase(context)
@@ -50,5 +50,6 @@ test('üretim çıktısında tablo ve gezinme ekran boyutuna uyum sağlar', asyn
   }
 
   await expect(page.getByText('Test modu')).toHaveCount(0)
+  await openFilters(page, isMobile)
   await expect(page.getByRole('combobox', { name: 'Para birimi' })).toHaveValue('TRY')
 })

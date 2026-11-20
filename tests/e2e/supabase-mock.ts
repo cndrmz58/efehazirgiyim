@@ -94,3 +94,10 @@ export async function signIn(page: Page) {
   await expect(page).toHaveURL('/payments')
   await expect(page.getByRole('button', { name: 'Ödeme Ekle' })).toBeEnabled()
 }
+
+// Mobil görünümde katlanır filtre grubunu açar; masaüstünde işlem yapmaz.
+export async function openFilters(page: Page, isMobile: boolean | undefined) {
+  if (!isMobile) return
+  const toggle = page.getByRole('button', { name: /^Filtreler( \(\d+\))?$/ })
+  if (await toggle.getAttribute('aria-expanded') !== 'true') await toggle.click()
+}

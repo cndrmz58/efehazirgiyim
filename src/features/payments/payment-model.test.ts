@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { filterPayments, formatMoney, paymentInputSchema, paymentSchema, summarizePaidByPeriod, summarizePayments } from './payment-model'
+import { filterPayments, formatMoney, paymentInputSchema, paymentSchema, summarizeDue, summarizePaidByPeriod, summarizePayments } from './payment-model'
 
 const draft = { organizationId: '00000000-0000-4000-8000-000000000011', detail: 'Örnek test', type: 'invoice', paymentMethod: 'bank', amount: '0,10', remainingAmount: '0,10', currency: 'TRY', paidOn: '', notes: '', status: 'unpaid' }
 
@@ -139,5 +139,38 @@ describe('ödeme doğrulaması ve özetleri', () => {
       .toEqual([{ period: '2026', amount: 16000n }])
     expect(summarizePaidByPeriod(records, { currency: 'EUR', year: '', month: '' }))
       .toEqual([{ period: '2025', amount: 6000n }])
+  })
+
+  it('vade özetinde gecikmiş ve yaklaşan kayıtları kalan tutarlarıyla, para birimlerini ayırarak gruplar', () => {
+    const today = '2026-11-20'
+    const records = [
+      payment({ amount: '100', dueOn: '2026-11-19' }),
+      payment({ amount: '80', remainingAmount: '30', status: 'partially_paid', paidOn: '2026-11-01', dueOn: '2026-10-01', currency: 'USD' }),
+      payment({ amount: '50', dueOn: '2026-11-20' }),
+      payment({ amount: '40', dueOn: '2026-12-20', currency: 'EUR' }),
+      payment({ amount: '25', dueOn: '2026-12-21' }),
+      payment({ amount: '10', remainingAmount: '0', status: 'paid', paidOn: '2026-11-10', dueOn: '2026-11-01' }),
+      payment({ amount: '15' }),
+    ]
+
+    const { overdue, upcoming } = summarizeDue(records, today)
+    expect(overdue.count).toBe(2)
+    expect(overdue.totals).toEqual([
+      { code: 'TRY', amount: 10000n },
+      { code: 'USD', amount: 3000n },
+    ])
+    expect(upcoming.count).toBe(2)
+    expect(upcoming.totals).toEqual([
+      { code: 'TRY', amount: 5000n },
+      { code: 'EUR', amount: 4000n },
+    ])
+  })
+
+  it('vade özetinde ufuk sınırı ay sonlarında takvime göre hesaplanır', () => {
+    const records = [payment({ amount: '10', dueOn: '2026-01-30' }), payment({ amount: '20', dueOn: '2026-01-31' })]
+    const { overdue, upcoming } = summarizeDue(records, '2025-12-31')
+    expect(overdue.count).toBe(0)
+    expect(upcoming.count).toBe(1)
+    expect(upcoming.totals).toEqual([{ code: 'TRY', amount: 1000n }])
   })
 })

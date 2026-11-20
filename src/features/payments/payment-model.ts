@@ -144,3 +144,38 @@ export function filterPayments(payments: readonly Payment[], filters: { query: s
     (!query || `${payment.detail} ${payment.notes}`.toLocaleLowerCase('tr-TR').includes(query)),
   )
 }
+
+export function localIsoDate(now = new Date()): string {
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+}
+
+function addDays(date: string, days: number): string {
+  const base = new Date(`${date}T00:00:00Z`)
+  base.setUTCDate(base.getUTCDate() + days)
+  return base.toISOString().slice(0, 10)
+}
+
+export type DueBucket = {
+  count: number
+  totals: { code: CurrencyCode; amount: bigint }[]
+}
+
+/** Vade tarihi girilmiş açık (ödenmemiş/kısmi) kayıtları gecikmiş ve yaklaşan olarak kalan tutarlarıyla özetler. */
+export function summarizeDue(payments: readonly Payment[], today: string, horizonDays = 30): { overdue: DueBucket; upcoming: DueBucket } {
+  const horizon = addDays(today, horizonDays)
+  const open = payments.filter((payment) => payment.status !== 'paid' && payment.dueOn)
+  const bucket = (records: readonly Payment[]): DueBucket => ({
+    count: records.length,
+    totals: currencies
+      .map(({ code }) => ({
+        code,
+        amount: records.filter((payment) => payment.currency === code)
+          .reduce((sum, payment) => sum + toMinorUnits(payment.remainingAmount), 0n),
+      }))
+      .filter(({ amount }) => amount > 0n),
+  })
+  return {
+    overdue: bucket(open.filter((payment) => payment.dueOn < today)),
+    upcoming: bucket(open.filter((payment) => payment.dueOn >= today && payment.dueOn <= horizon)),
+  }
+}
