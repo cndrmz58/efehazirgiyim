@@ -103,7 +103,7 @@ export function summarizePayments(payments: readonly Payment[]) {
 
 export function summarizePaidByPeriod(
   payments: readonly Payment[],
-  filters: { currency: CurrencyCode; year: string; month: string },
+  filters: { currency: CurrencyCode; year: string; month: string; type?: string; organizationId?: string },
 ) {
   const totals = new Map<string, bigint>()
   for (const payment of payments) {
@@ -111,6 +111,8 @@ export function summarizePaidByPeriod(
       payment.currency !== filters.currency ||
       payment.status === 'unpaid' ||
       !payment.paidOn ||
+      (filters.type && payment.type !== filters.type) ||
+      (filters.organizationId && payment.organizationId !== filters.organizationId) ||
       (filters.year && !payment.paidOn.startsWith(`${filters.year}-`)) ||
       (filters.month && payment.paidOn.slice(5, 7) !== filters.month)
     ) continue

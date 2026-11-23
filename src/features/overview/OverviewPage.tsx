@@ -62,6 +62,8 @@ export function OverviewPage() {
   const [currency, setCurrency] = useState(defaultCurrency)
   const [year, setYear] = useState('')
   const [month, setMonth] = useState('')
+  const [type, setType] = useState('')
+  const [organizationId, setOrganizationId] = useState('')
   const payments = store.payments
   const summaries = summarizePayments(payments)
   const paidCount = summaries.reduce((count, summary) => count + summary.paidCount, 0)
@@ -76,7 +78,7 @@ export function OverviewPage() {
   const organizations = new Map(store.organizations.map(({ id, name }) => [id, name]))
   const years = [...new Set(payments.filter((payment) => payment.status !== 'unpaid' && payment.paidOn).map(({ paidOn }) => paidOn.slice(0, 4)))]
     .sort((left, right) => right.localeCompare(left))
-  const periods = summarizePaidByPeriod(payments, { currency, year, month })
+  const periods = summarizePaidByPeriod(payments, { currency, year, month, type, organizationId })
   const maxAmount = periods.reduce((maximum, period) => period.amount > maximum ? period.amount : maximum, 0n)
   const paidTotal = periods.reduce((sum, period) => sum + period.amount, 0n)
   const peak = periods.reduce((best, period) => period.amount > best.amount ? period : best, { period: '', amount: 0n })
@@ -133,6 +135,20 @@ export function OverviewPage() {
                     const value = String(index + 1).padStart(2, '0')
                     return <option key={value} value={value}>{label}</option>
                   })}
+                </select>
+              </label>
+              <label className="filter-field">
+                <span>Ödeme türü</span>
+                <select value={type} onChange={(event) => setType(event.target.value)}>
+                  <option value="">Tüm türler</option>
+                  {Object.entries(tr.payments.types).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+              </label>
+              <label className="filter-field">
+                <span>Şirket</span>
+                <select value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}>
+                  <option value="">Tüm şirketler</option>
+                  {store.organizations.map((organization) => <option key={organization.id} value={organization.id}>{organization.name}</option>)}
                 </select>
               </label>
             </div>

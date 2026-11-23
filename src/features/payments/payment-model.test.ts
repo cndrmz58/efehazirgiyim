@@ -121,9 +121,9 @@ describe('ödeme doğrulaması ve özetleri', () => {
 
   it('ödenen tutarı gerçekleşen tarihe göre aylık veya yıllık gruplar; dövizleri ve vadesiz ödemeleri karıştırmaz', () => {
     const records = [
-      payment({ amount: '100', remainingAmount: '0', status: 'paid', paidOn: '2026-01-15', dueOn: '2025-12-15' }),
-      payment({ amount: '100', remainingAmount: '40', status: 'partially_paid', paidOn: '2026-01-20' }),
-      payment({ amount: '75', remainingAmount: '0', status: 'paid', paidOn: '2026-02-01' }),
+      payment({ amount: '100', remainingAmount: '0', status: 'paid', paidOn: '2026-01-15', dueOn: '2025-12-15', type: 'invoice' }),
+      payment({ amount: '100', remainingAmount: '40', status: 'partially_paid', paidOn: '2026-01-20', type: 'tax', organizationId: '00000000-0000-4000-8000-000000000099' }),
+      payment({ amount: '75', remainingAmount: '0', status: 'paid', paidOn: '2026-02-01', type: 'tax' }),
       payment({ amount: '60', remainingAmount: '0', status: 'paid', paidOn: '2025-01-01', currency: 'EUR' }),
       payment({ amount: '50', status: 'unpaid', dueOn: '2026-01-01' }),
     ]
@@ -139,6 +139,16 @@ describe('ödeme doğrulaması ve özetleri', () => {
       .toEqual([{ period: '2026', amount: 16000n }])
     expect(summarizePaidByPeriod(records, { currency: 'EUR', year: '', month: '' }))
       .toEqual([{ period: '2025', amount: 6000n }])
+    expect(summarizePaidByPeriod(records, { currency: 'TRY', year: '2026', month: '', type: 'invoice' }))
+      .toEqual(Array.from({ length: 12 }, (_, index) => ({
+        period: `2026-${String(index + 1).padStart(2, '0')}`,
+        amount: index === 0 ? 10000n : 0n,
+      })))
+    expect(summarizePaidByPeriod(records, { currency: 'TRY', year: '2026', month: '', organizationId: '00000000-0000-4000-8000-000000000099' }))
+      .toEqual(Array.from({ length: 12 }, (_, index) => ({
+        period: `2026-${String(index + 1).padStart(2, '0')}`,
+        amount: index === 0 ? 6000n : 0n,
+      })))
   })
 
   it('vade özetinde gecikmiş ve yaklaşan kayıtları kalan tutarlarıyla, para birimlerini ayırarak gruplar', () => {
