@@ -29,6 +29,23 @@ describe('Türkçe ödeme çalışma alanı', () => {
     expect(screen.getByRole('heading', { name: 'Veri bağlantısı yapılandırılmadı' })).toBeVisible()
   })
 
+  it('üst çubuktaki bildirim menüsünü boş açar ve kapatır', async () => {
+    const user = userEvent.setup()
+    renderApp()
+
+    const trigger = screen.getByRole('button', { name: 'Bildirimler' })
+    expect(trigger).toBeVisible()
+    expect(screen.queryByRole('region', { name: 'Bildirimler' })).not.toBeInTheDocument()
+
+    await user.click(trigger)
+    expect(screen.getByRole('region', { name: 'Bildirimler' })).toBeVisible()
+    expect(screen.getByRole('region', { name: 'Bildirimler' })).toHaveTextContent('Bildirimler')
+    expect(screen.getByRole('region', { name: 'Bildirimler' }).children).toHaveLength(1)
+
+    await user.click(trigger)
+    expect(screen.queryByRole('region', { name: 'Bildirimler' })).not.toBeInTheDocument()
+  })
+
   it('yalnızca Genel Bakış ve Ödemeler ile gezinir ve mobil menüyü kapatır', async () => {
     const user = userEvent.setup()
     renderApp()

@@ -158,6 +158,7 @@ function addDays(date: string, days: number): string {
 export type DueBucket = {
   count: number
   totals: { code: CurrencyCode; amount: bigint }[]
+  records: Payment[]
 }
 
 /** Vade tarihi girilmiş açık (ödenmemiş/kısmi) kayıtları gecikmiş ve yaklaşan olarak kalan tutarlarıyla özetler. */
@@ -166,6 +167,7 @@ export function summarizeDue(payments: readonly Payment[], today: string, horizo
   const open = payments.filter((payment) => payment.status !== 'paid' && payment.dueOn)
   const bucket = (records: readonly Payment[]): DueBucket => ({
     count: records.length,
+    records: [...records].sort((left, right) => left.dueOn.localeCompare(right.dueOn) || left.detail.localeCompare(right.detail, 'tr-TR')),
     totals: currencies
       .map(({ code }) => ({
         code,

@@ -2,7 +2,7 @@ import { CalendarClock, CalendarX } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useState } from 'react'
 import { currencies, defaultCurrency } from '../../lib/currencies'
-import { formatMoney, localIsoDate, summarizeDue, summarizePaidByPeriod, summarizePayments, type DueBucket } from '../payments/payment-model'
+import { formatMoney, localIsoDate, summarizeDue, summarizePaidByPeriod, summarizePayments, toMinorUnits, type DueBucket } from '../payments/payment-model'
 import { usePayments } from '../payments/payment-store'
 import { tr } from '../../locales/tr'
 
@@ -10,7 +10,13 @@ const percentFormat = new Intl.NumberFormat('tr-TR', { style: 'percent', maximum
 const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık']
 const shortMonths = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara']
 
-function DueCard({ variant, title, description, bucket }: { variant: 'overdue' | 'upcoming'; title: string; description: string; bucket: DueBucket }) {
+function DueCard({ variant, title, description, bucket, organizations }: {
+  variant: 'overdue' | 'upcoming'
+  title: string
+  description: string
+  bucket: DueBucket
+  organizations: ReadonlyMap<string, string>
+}) {
   const Icon = variant === 'overdue' ? CalendarX : CalendarClock
   return (
     <article className={`settings-card due-card due-${variant}`} aria-label={title}>
@@ -18,12 +24,30 @@ function DueCard({ variant, title, description, bucket }: { variant: 'overdue' |
       <div className="due-body">
         <h2>{title}</h2>
         <p className="due-count">{bucket.count} <span>kayıt</span></p>
-        {bucket.totals.length > 0 ? (
+        {bucket.totals.length > 0 && (
           <dl className="due-amounts">
             {bucket.totals.map(({ code, amount }) => (
               <div key={code}><dt>Kalan ({code})</dt><dd>{formatMoney(amount, code)}</dd></div>
             ))}
           </dl>
+        )}
+        {bucket.records.length > 0 ? (
+          <ul className="due-record-list" aria-label={`${title} listesi`} tabIndex={0}>
+            {bucket.records.map((payment) => (
+              <li key={payment.id}>
+                <div className="due-record-main">
+                  <strong>{payment.detail}</strong>
+                  <span>{organizations.get(payment.organizationId) ?? '—'}</span>
+                  <span>{tr.payments.types[payment.type]}</span>
+                </div>
+                <div className="due-record-meta">
+                  <span className={`payment-status status-${payment.status.replace('_', '-')}`}>{tr.payments.statuses[payment.status]}</span>
+                  <time dateTime={payment.dueOn}>{payment.dueOn.split('-').reverse().join('.')}</time>
+                  <strong>{formatMoney(toMinorUnits(payment.remainingAmount), payment.currency)}</strong>
+                </div>
+              </li>
+            ))}
+          </ul>
         ) : (
           <p className="due-empty">{variant === 'overdue' ? 'Gecikmiş açık kayıt yok.' : 'Bu aralıkta vadesi gelen açık kayıt yok.'}</p>
         )}
@@ -49,6 +73,7 @@ export function OverviewPage() {
     { key: 'unpaid', label: 'Ödenmedi', count: unpaidCount },
   ]
   const due = summarizeDue(payments, localIsoDate())
+  const organizations = new Map(store.organizations.map(({ id, name }) => [id, name]))
   const years = [...new Set(payments.filter((payment) => payment.status !== 'unpaid' && payment.paidOn).map(({ paidOn }) => paidOn.slice(0, 4)))]
     .sort((left, right) => right.localeCompare(left))
   const periods = summarizePaidByPeriod(payments, { currency, year, month })
@@ -67,6 +92,12 @@ export function OverviewPage() {
         <div><p className="eyebrow">ÖDEME KAYITLARINA GÖRE</p><h1>Genel Bakış</h1><p className="page-description">Erişiminiz olan şirketlerdeki elle girilmiş ödeme kayıtlarının özeti. Tutarlar Kalan alanından, kayıt sayıları Durum seçiminden hesaplanır; banka bakiyesi değildir.</p></div>
         <Link className="button-secondary" to="/payments">Ödeme tablosuna git</Link>
       </header>
+      {store.status === 'ready' && (
+        <section className="due-grid" aria-label="Vade göstergeleri">
+          <DueCard variant="overdue" title="Gecikmiş ödemeler" description="Vade tarihi geçmiş, ödenmemiş veya kısmen ödenmiş kayıtlar." bucket={due.overdue} organizations={organizations} />
+          <DueCard variant="upcoming" title="Yaklaşan vadeler · 30 gün" description="Bugünden itibaren 30 gün içinde vadesi gelen açık kayıtlar." bucket={due.upcoming} organizations={organizations} />
+        </section>
+      )}
       {store.status === 'ready' && (
         <section className="settings-card paid-trend" aria-labelledby="paid-trend-heading">
           <div className="paid-trend-heading">
@@ -145,10 +176,6 @@ export function OverviewPage() {
       ) : (
         <>
           {payments.length === 0 && <p className="overview-empty">Henüz ödeme kaydı yok. Ödeme tablosuna kayıt eklediğinizde bu özet güncellenir.</p>}
-          <section className="due-grid" aria-label="Vade göstergeleri">
-            <DueCard variant="overdue" title="Gecikmiş ödemeler" description="Vade tarihi geçmiş, ödenmemiş veya kısmen ödenmiş kayıtlar." bucket={due.overdue} />
-            <DueCard variant="upcoming" title="Yaklaşan vadeler · 30 gün" description="Bugünden itibaren 30 gün içinde vadesi gelen açık kayıtlar." bucket={due.upcoming} />
-          </section>
           <section className="settings-card currency-summary status-summary" aria-labelledby="status-summary-heading">
             <h2 id="status-summary-heading">Kayıt durumları</h2>
             {payments.length > 0 && (

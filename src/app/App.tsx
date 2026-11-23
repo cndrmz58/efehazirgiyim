@@ -5,6 +5,7 @@ import {
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Link, Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import { SetupNotice } from '../components/SetupNotice'
+import { NotificationMenu } from '../components/NotificationMenu'
 import { PaymentsPage } from '../features/payments/PaymentsPage'
 import { SettingsPage } from '../features/settings/SettingsPage'
 import { OverviewPage } from '../features/overview/OverviewPage'
@@ -111,8 +112,11 @@ function Workspace({ environment, authConfig }: { environment: EnvironmentState;
       <div className="workspace">
         <div className="workspace-header">
           <span>{tr.application} <ChevronRight size={14} aria-hidden="true" /> Çalışma Alanı</span>
-          {authConfig && <AccountMenu config={authConfig} />}
-          {import.meta.env.DEV && <span className="development-badge">Geliştirme ortamı</span>}
+          <div className="workspace-header-actions">
+            <NotificationMenu />
+            {authConfig && <AccountMenu config={authConfig} />}
+            {import.meta.env.DEV && <span className="development-badge">Geliştirme ortamı</span>}
+          </div>
         </div>
         <main id="main-content" tabIndex={-1}>
           <SetupNotice environment={environment} />

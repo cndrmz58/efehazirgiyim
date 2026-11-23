@@ -68,7 +68,7 @@ export function PaymentsPage() {
   }
 
   return (
-    <>
+    <div className="payments-page">
       <header className="page-heading">
         <div>
           <p className="eyebrow">ÖDEME TAKİBİ</p>
@@ -227,6 +227,6 @@ export function PaymentsPage() {
         </div>
       </section>
       )}
-    </>
+    </div>
   )
 }

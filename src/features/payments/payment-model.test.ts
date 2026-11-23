@@ -144,10 +144,10 @@ describe('ödeme doğrulaması ve özetleri', () => {
   it('vade özetinde gecikmiş ve yaklaşan kayıtları kalan tutarlarıyla, para birimlerini ayırarak gruplar', () => {
     const today = '2026-11-20'
     const records = [
-      payment({ amount: '100', dueOn: '2026-11-19' }),
-      payment({ amount: '80', remainingAmount: '30', status: 'partially_paid', paidOn: '2026-11-01', dueOn: '2026-10-01', currency: 'USD' }),
-      payment({ amount: '50', dueOn: '2026-11-20' }),
-      payment({ amount: '40', dueOn: '2026-12-20', currency: 'EUR' }),
+      payment({ detail: 'Dünkü ödeme', amount: '100', dueOn: '2026-11-19' }),
+      payment({ detail: 'Önceki kısmi ödeme', amount: '80', remainingAmount: '30', status: 'partially_paid', paidOn: '2026-11-01', dueOn: '2026-10-01', currency: 'USD' }),
+      payment({ detail: 'Bugünkü ödeme', amount: '50', dueOn: '2026-11-20' }),
+      payment({ detail: 'Aralık ödemesi', amount: '40', dueOn: '2026-12-20', currency: 'EUR' }),
       payment({ amount: '25', dueOn: '2026-12-21' }),
       payment({ amount: '10', remainingAmount: '0', status: 'paid', paidOn: '2026-11-10', dueOn: '2026-11-01' }),
       payment({ amount: '15' }),
@@ -159,11 +159,13 @@ describe('ödeme doğrulaması ve özetleri', () => {
       { code: 'TRY', amount: 10000n },
       { code: 'USD', amount: 3000n },
     ])
+    expect(overdue.records.map(({ detail }) => detail)).toEqual(['Önceki kısmi ödeme', 'Dünkü ödeme'])
     expect(upcoming.count).toBe(2)
     expect(upcoming.totals).toEqual([
       { code: 'TRY', amount: 5000n },
       { code: 'EUR', amount: 4000n },
     ])
+    expect(upcoming.records.map(({ detail }) => detail)).toEqual(['Bugünkü ödeme', 'Aralık ödemesi'])
   })
 
   it('vade özetinde ufuk sınırı ay sonlarında takvime göre hesaplanır', () => {
