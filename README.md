@@ -42,23 +42,52 @@ implemented. TL is the default currency
 for both new records and the initial table filter. New or edited records become
 visible by resetting other filters and selecting that record's currency.
 
-The **Kasa Defteri** (`/cashbook`) is also an approved UI-only prototype, with
-Tarih, Açıklama, İşlem Türü, Borç (Giren), and Alacak (Çıkan) columns.
-It shows an empty, horizontally scrollable table without sample transactions.
+The **Kasa Defteri** (`/cashbook`) is connected to Supabase through the existing
+authenticated client, with Tarih, Açıklama, İşlem Türü, Borç (Giren), and Alacak
+(Çıkan) columns. Apply the cashbook migration and operator activation below
+before deploying this frontend; hosted activation is not yet verified.
+There are no sample transactions.
 An always-visible bottom month bar switches the displayed period from
 Kasım 2026 through Aralık 2027 (14 months). The bar scrolls horizontally on
 smaller screens. The initial selection is Kasım 2026; month selection is
 UI-only and resets on page reload.
-Adding records is disabled until its backend and data contract are approved
-and implemented. It does not store records or integrate with payments.
+Active organization members can read their organization's records. Only the
+owner-designated accounting account, assigned the separate `cashbook_role` by
+trusted operator SQL, can add, edit, or delete. Organization admins and payment
+managers are read-only unless explicitly assigned that cashbook role.
+There is no automatic integration with payments. Each row has a required date,
+description, free-text transaction type, and exactly one positive TL direction;
+the other amount must be zero. Enter records within the selected month; cancel
+the form and switch months to enter another month. Select the organization
+explicitly when multiple memberships exist; balances never combine organizations.
 The header displays the selected month and a TL cash summary. The UI calculation
 uses only records dated in that exact year and month: balance = incoming − outgoing,
 without automatically carrying a previous month's balance. Amounts use validated
 decimal strings and exact `bigint` minor-unit arithmetic, including negative
-balances. The table and summary use the same filtered records. Until a backend
-provides actual cashbook records, totals display `—` with an explicit unavailable
-notice, not a fabricated zero balance. The internal UI record shape is not an
-approved database schema; persistence and access policies remain deferred.
+balances. The table and summary use the same filtered records. Until the connection
+loads actual cashbook records, totals display `—` with an explicit unavailable
+notice, not a fabricated zero balance. A successful empty load shows zero.
+SQL constraints and RLS enforce the same money and permission rules. Every
+mutation has an append-only audit snapshot, and revision-checked edits/deletes
+report conflicts without losing open form input. Use **Yenile** for other users'
+changes. Failed, invalid or row-limit-truncated responses never produce totals.
+
+### Activating Kasa Defteri
+
+1. Back up the target database. In Supabase SQL Editor, apply
+   [20261124140000_cashbook.sql](./supabase/migrations/20261124140000_cashbook.sql)
+   after all existing migrations, then
+   [enable_cashbook.sql](./supabase/operators/enable_cashbook.sql).
+   Follow the transaction and migration-history procedure in
+   [database.md](./database.md#approved-manual-cashbook-publiccashbook_entries).
+2. The operator script resolves the owner-approved, confirmed Auth account and
+   its single active organization membership. It fails instead of guessing if
+   either is missing or ambiguous. It replaces only cashbook-role assignments
+   within that organization, never payment/admin permissions, and adds no users
+   or financial records.
+3. Deploy the frontend using the existing Supabase public environment values.
+   No additional key or backend service is needed. Verify accounting-account
+   CRUD and another active member's read-only access in the deployed app.
 
 **Ödemeler**, **Genel Bakış**, the UI-only **Firmalar** directory, and
 **Kasa Defteri** are selectable in the sidebar. The other entries, including **Ayarlar**, remain

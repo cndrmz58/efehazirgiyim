@@ -88,7 +88,7 @@ describe('Türkçe ödeme çalışma alanı', () => {
     expect(screen.getByText(/backend bağlantısı tamamlandığında açılacak/)).toBeVisible()
   })
 
-  it('Kasa Defterini beş sütunlu ve kayıt işlemleri kapalı bir prototip olarak açar', () => {
+  it('Kasa Defterini bağlantı olmadan kayıt işlemleri kapalı açar', () => {
     renderApp('/cashbook')
 
     expect(screen.getByRole('heading', { name: 'Kasa Defteri', level: 1 })).toBeVisible()
@@ -98,9 +98,9 @@ describe('Türkçe ödeme çalışma alanı', () => {
       'Tarih', 'Açıklama', 'İşlem Türü', 'Borç (Giren)', 'Alacak (Çıkan)',
     ])
     expect(table.getAllByRole('row')).toHaveLength(2)
-    expect(table.getByRole('heading', { name: 'Henüz kasa kaydı yok' })).toBeVisible()
+    expect(table.getByRole('heading', { name: 'Kasa verileri gösterilemiyor' })).toBeVisible()
     expect(screen.getByRole('button', { name: 'Kayıt ekle' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Kayıt ekle' })).toHaveAccessibleDescription(/yalnızca arayüz prototipidir/)
+    expect(screen.getByRole('button', { name: 'Kayıt ekle' })).toHaveAccessibleDescription(/Yalnızca yetkilendirilmiş muhasebe hesabı/)
     expect(screen.getByRole('region', { name: 'Yatay kaydırılabilir kasa defteri tablosu' })).toHaveAttribute('tabindex', '0')
   })
 
@@ -124,7 +124,7 @@ describe('Türkçe ödeme çalışma alanı', () => {
     expect(months.getAllByRole('button', { pressed: true })).toHaveLength(1)
     expect(months.getByRole('button', { name: 'Aralık 2027', pressed: true })).toBeVisible()
     expect(screen.getByRole('heading', { name: 'Aralık 2027 — Kasa hareketleri' })).toBeVisible()
-    expect(screen.getByRole('heading', { name: 'Henüz kasa kaydı yok' })).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Kasa verileri gösterilemiyor' })).toBeVisible()
     expect(screen.getByRole('button', { name: 'Kayıt ekle' })).toBeDisabled()
   })
 

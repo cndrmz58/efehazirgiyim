@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { summarizeCashbookMonth, type CashbookEntry } from './cashbook-model'
+import { cashbookInputSchema, summarizeCashbookMonth, type CashbookEntry } from './cashbook-model'
 
 const entry = (id: string, date: string, incoming: string, outgoing: string): CashbookEntry => ({
   id, date, incoming, outgoing, description: id, type: '',
@@ -16,6 +16,18 @@ const entries = [
 ]
 
 describe('aylık kasa bakiyesi', () => {
+  it('yeni kayıtta yalnızca bir yönde pozitif tutar kabul eder ve virgülü normalleştirir', () => {
+    const input = {
+      organizationId: '00000000-0000-4000-8000-000000000011', date: '2026-11-24',
+      description: 'Kasa', type: 'Nakit', incoming: '0,10', outgoing: '0',
+    }
+    expect(cashbookInputSchema.parse(input)).toMatchObject({ incoming: '0.10', outgoing: '0.00' })
+    for (const [incoming, outgoing] of [['0', '0'], ['1', '1'], ['-1', '0'], ['0.001', '0'], ['1000000000000', '0']]) {
+      expect(cashbookInputSchema.safeParse({ ...input, incoming, outgoing }).success).toBe(false)
+    }
+    expect(cashbookInputSchema.safeParse({ ...input, description: ' ' }).success).toBe(false)
+    expect(cashbookInputSchema.safeParse({ ...input, date: '2026-11-31' }).success).toBe(false)
+  })
   it.each([
     ['2026-11', 10030n, 8003n, 2027n, ['kasim-ilk', 'kasim-son']],
     ['2026-12', 100000n, 100000n, 0n, ['aralik-ilk', 'aralik-son']],

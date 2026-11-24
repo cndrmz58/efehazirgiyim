@@ -1,5 +1,5 @@
 import { BookOpen, Plus } from 'lucide-react'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { tr } from '../../locales/tr'
 import { formatMoney, toMinorUnits } from '../payments/payment-model'
 import { summarizeCashbookMonth, type CashbookEntry } from './cashbook-model'
@@ -14,7 +14,17 @@ const periods = [
   })),
 ]
 
-export function CashbookPage({ entries = null }: { entries?: readonly CashbookEntry[] | null }) {
+export function CashbookPage({ entries = null, canEdit = false, busy = false, editing = false, editor, notice, onAdd, onEdit, onDelete }: {
+  entries?: readonly CashbookEntry[] | null
+  canEdit?: boolean
+  busy?: boolean
+  editing?: boolean
+  editor?: ReactNode
+  notice?: ReactNode
+  onAdd?: (period: string) => void
+  onEdit?: (id: string, period: string) => void
+  onDelete?: (id: string) => void
+}) {
   const text = tr.cashbook
   const [selectedPeriod, setSelectedPeriod] = useState(initialPeriod)
   const summary = entries === null ? null : summarizeCashbookMonth(entries, selectedPeriod.id)
@@ -23,11 +33,13 @@ export function CashbookPage({ entries = null }: { entries?: readonly CashbookEn
     <div className="cashbook-page">
       <header className="page-heading">
         <h1>{tr.navigation.cashbook}</h1>
-        <button type="button" className="button-primary cashbook-add-button" disabled aria-describedby="cashbook-backend-note">
+        <button type="button" className="button-primary cashbook-add-button" disabled={!canEdit || busy || editing} aria-describedby="cashbook-backend-note" onClick={() => onAdd?.(selectedPeriod.id)}>
           <Plus size={17} aria-hidden="true" />
           {text.add}
         </button>
       </header>
+      {notice}
+      {editor}
       <section className="settings-card cashbook-balance" aria-label={text.balanceSummary} aria-live="polite">
         <div>
           <h2>{selectedPeriod.label} — {text.balance}</h2>
@@ -54,6 +66,7 @@ export function CashbookPage({ entries = null }: { entries?: readonly CashbookEn
                 <th scope="col">{text.type}</th>
                 <th scope="col" className="amount-heading">{text.incoming}</th>
                 <th scope="col" className="amount-heading">{text.outgoing}</th>
+                {canEdit && <th scope="col">{text.actions}</th>}
               </tr>
             </thead>
             <tbody>
@@ -64,13 +77,17 @@ export function CashbookPage({ entries = null }: { entries?: readonly CashbookEn
                   <td>{entry.type}</td>
                   <td className="amount-cell">{formatMoney(toMinorUnits(entry.incoming), 'TRY')}</td>
                   <td className="amount-cell">{formatMoney(toMinorUnits(entry.outgoing), 'TRY')}</td>
+                  {canEdit && <td><div className="form-actions">
+                    <button className="button-text" type="button" disabled={busy || editing} aria-label={`${text.edit}: ${entry.description}`} onClick={() => onEdit?.(entry.id, selectedPeriod.id)}>{text.edit}</button>
+                    <button className="button-text" type="button" disabled={busy || editing} aria-label={`${text.remove}: ${entry.description}`} onClick={() => onDelete?.(entry.id)}>{text.remove}</button>
+                  </div></td>}
                 </tr>
               )) : <tr>
-                <td colSpan={5}>
+                <td colSpan={canEdit ? 6 : 5}>
                   <div className="empty-state">
                     <span className="empty-icon"><BookOpen size={24} aria-hidden="true" /></span>
-                    <h3>{text.emptyTitle}</h3>
-                    <p>{text.emptyDescription}</p>
+                    <h3>{summary ? text.emptyTitle : text.unavailableTitle}</h3>
+                    <p>{summary ? text.emptyDescription : text.balanceUnavailable}</p>
                   </div>
                 </td>
               </tr>}
@@ -86,6 +103,7 @@ export function CashbookPage({ entries = null }: { entries?: readonly CashbookEn
             type="button"
             className="cashbook-month"
             aria-pressed={selectedPeriod.id === period.id}
+            disabled={busy || editing}
             onClick={() => setSelectedPeriod(period)}
           >
             {period.label}

@@ -13,6 +13,12 @@ overview. A UI-only Firmalar directory prototype was explicitly approved on
 2026-11-20; it has no persistence or backend and must not show sample companies.
 The former browser-local test mode was removed at the owner's request.
 
+The owner also approved Supabase-backed manual TL Kasa Defteri entries.
+Active organization members read; only the separately assigned accounting
+account writes (not implicitly admins or payment managers). It has audited
+CRUD, no monthly carry-forward, and no payment integration. Its migration and
+operator activation still require hosted application; see `database.md`.
+
 The Supabase foundation includes browser auth flows and versioned PostgreSQL
 RLS migrations for organization/department access and organization-scoped,
 audited payments. The owner applied the organization-wide payment migration
@@ -229,7 +235,8 @@ The initial product scope is a roadmap, not a single implementation task:
 
 The **current narrower delivery** remains the Supabase-backed manual payment
 table described in the README, with the explicitly approved UI-only Firmalar
-directory prototype. Firm persistence, search, editing, or use in payment
+directory prototype, plus the approved manual cashbook described above.
+Firm persistence, search, editing, or use in payment
 workflows remains deferred until the user approves its data contract and
 backend. Wait for explicit user approval before further application
 development or expanding the approved milestone. A roadmap entry alone is not

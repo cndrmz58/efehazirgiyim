@@ -30,6 +30,49 @@ already-applied migration. SQL regression tests live in
   to their full amount.
 - Payment method is stored as `check`, `cash`, or `bank`. Historical rows stay
   null because their method cannot be inferred; new rows must specify a method.
+- [Manual cashbook](./supabase/migrations/20261124140000_cashbook.sql):
+  independent, organization-scoped TL entries with accountant-only writes and
+  append-only auditing. Migration and operator activation require hosted
+  application before the new frontend is used; not yet verified in production.
+
+## Approved manual cashbook (`public.cashbook_entries`)
+
+The cashbook is independent of payments. Each record belongs to one organization
+and contains a finite `entry_on` date, nonblank `description` (up to 2,000
+characters), nonblank free-text `entry_type` (up to 100 characters), and exact
+TL `incoming` / `outgoing` decimal values. Exactly one direction must be positive;
+the other must be zero. Both must be below `1000000000000` with at most two
+fractional digits. Unconstrained `numeric` plus checks rejects excess precision
+instead of rounding it. API reads cast money to text; the UI uses `bigint`.
+The selected month's balance is incoming minus outgoing, with no carry-forward.
+The existing November 2026–December 2027 month bar is preserved.
+
+All active organization members can read their organization's cashbook.
+Only active memberships with `cashbook_role = 'accountant'` can insert, update,
+or delete; organization admins and payment managers have no implicit write
+permission. At most one accountant is assigned per organization. Membership
+roles cannot be changed through the browser. The owner-approved account is
+resolved by the operator SQL from an existing Auth user, not by comparing a
+browser-provided email. Activation fails if the account is missing, unconfirmed,
+or does not have exactly one active organization membership; it never creates
+an account, organization, or membership.
+
+`id`, organization, revision, timestamps and actors are server-owned.
+Updates/deletes filter by the last-seen revision; conflicts preserve the open
+form and reload the data. Every mutation writes full old/new row snapshots to
+append-only `cashbook_audit`. Only active organization admins can read the audit;
+API roles cannot alter it. No sample transactions are inserted.
+
+Deployment: apply `20261124140000_cashbook.sql` after all existing migrations,
+then run [enable_cashbook.sql](./supabase/operators/enable_cashbook.sql) as the
+database owner. The operator script only replaces cashbook-role assignments in
+the resolved organization; payment and administrator roles remain unchanged.
+For SQL Editor deployment, wrap both files in one transaction and record version
+`20261124140000` in `supabase_migrations.schema_migrations`, following the manual
+deployment procedure below. Do not run regression-test fixtures in production.
+Deploy the matching frontend afterward. No new environment variables, secret
+keys, or external services are required. Hosted application and account flows
+must still be verified after deployment.
 
 ## Manual payments (`public.payments`)
 

@@ -25,8 +25,9 @@ function filters(url: URL) {
 const matches = (row: Row, conditions: readonly (readonly [string, string])[]) =>
   conditions.every(([key, value]) => String(row[key]) === value)
 
-export async function mockSupabase(context: BrowserContext) {
-  const rows: Row[] = []
+export async function mockSupabase(context: BrowserContext, options: { cashbookRole?: 'accountant' | null } = {}) {
+  const paymentRows: Row[] = []
+  const cashbookRows: Row[] = []
   let sequence = 0
 
   await context.route('**/auth/v1/**', async (route: Route) => {
@@ -47,9 +48,10 @@ export async function mockSupabase(context: BrowserContext) {
       return route.fulfill({ json: [{ id: organizationId, name: 'Şirket' }] })
     }
     if (method === 'GET' && table === 'organization_memberships') {
-      return route.fulfill({ json: [{ organization_id: organizationId, role: 'admin', payment_role: null }] })
+      return route.fulfill({ json: [{ organization_id: organizationId, role: 'admin', payment_role: null, cashbook_role: options.cashbookRole ?? null }] })
     }
-    if (table !== 'payments') return route.fulfill({ status: 404, json: {} })
+    if (table !== 'payments' && table !== 'cashbook_entries') return route.fulfill({ status: 404, json: {} })
+    const rows = table === 'payments' ? paymentRows : cashbookRows
 
     const conditions = filters(url)
     if (method === 'GET') {
@@ -68,7 +70,7 @@ export async function mockSupabase(context: BrowserContext) {
         revision: 1, created_at: now, updated_at: now,
       }
       rows.unshift(row)
-      return route.fulfill({ status: 201, json: row })
+      return route.fulfill({ status: 201, json: table === 'payments' ? row : [row] })
     }
     const index = rows.findIndex((row) => matches(row, conditions))
     const target = rows[index]

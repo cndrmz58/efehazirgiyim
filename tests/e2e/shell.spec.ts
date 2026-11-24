@@ -9,7 +9,7 @@ test('oturum açılmadan çalışma alanı gösterilmez', async ({ context, page
   await expect(page.getByRole('navigation', { name: 'Ana menü' })).toHaveCount(0)
 })
 
-test('Kasa Defteri prototipi masaüstünde ve mobilde açılır', async ({ context, page, isMobile }) => {
+test('Kasa Defteri salt okunur olarak masaüstünde ve mobilde açılır', async ({ context, page, isMobile }) => {
   await mockSupabase(context)
   await signIn(page)
   const menu = page.getByRole('navigation', { name: 'Ana menü' })
@@ -24,7 +24,7 @@ test('Kasa Defteri prototipi masaüstünde ve mobilde açılır', async ({ conte
   await expect(page.getByRole('heading', { name: 'Henüz kasa kaydı yok' })).toBeVisible()
   const balanceSummary = page.getByRole('region', { name: 'Seçilen ayın kasa özeti' })
   await expect(balanceSummary.getByRole('heading', { name: 'Kasım 2026 — Güncel Bakiye' })).toBeVisible()
-  await expect(balanceSummary.getByText(/gerçek bakiye hesaplanamıyor/)).toBeVisible()
+  await expect(balanceSummary.getByText('0,00 TL')).toHaveCount(3)
   const tableTop = await page.locator('.cashbook').evaluate((element) => element.getBoundingClientRect().top)
   expect(tableTop).toBeLessThanOrEqual(isMobile ? 520 : 330)
   await expect(page.getByRole('columnheader', { name: 'Tarih', exact: true })).toBeInViewport()

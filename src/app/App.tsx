@@ -10,7 +10,7 @@ import { PaymentsPage } from '../features/payments/PaymentsPage'
 import { SettingsPage } from '../features/settings/SettingsPage'
 import { OverviewPage } from '../features/overview/OverviewPage'
 import { FirmsPage } from '../features/firms/FirmsPage'
-import { CashbookPage } from '../features/cashbook/CashbookPage'
+import { CashbookWorkspace } from '../features/cashbook/CashbookWorkspace'
 import { PaymentsProvider } from '../features/payments/PaymentsProvider'
 import { getLoginClient, type AuthConfig } from '../features/auth/auth-client'
 import { AccountMenu } from '../components/AccountMenu'
@@ -127,7 +127,7 @@ function Workspace({ environment, authConfig }: { environment: EnvironmentState;
             <Route path="/payments" element={<PaymentsPage />} />
             <Route path="/overview" element={<OverviewPage />} />
             <Route path="/firms" element={<FirmsPage />} />
-            <Route path="/cashbook" element={<CashbookPage />} />
+            <Route path="/cashbook" element={<CashbookWorkspace client={authConfig ? getLoginClient(authConfig) : null} />} />
             <Route path="/settings" element={<SettingsPage />} />
             {navigation.filter(({ path }) => !['/payments', '/settings', '/overview', '/firms', '/cashbook'].includes(path)).map(({ path, label }) => (
               <Route key={path} path={path} element={<PlannedPage title={label} />} />

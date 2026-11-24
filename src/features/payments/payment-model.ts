@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { currencies, type CurrencyCode } from '../../lib/currencies'
 
-const decimalAmountSchema = z.string().trim()
+export const decimalAmountSchema = z.string().trim()
   .regex(/^(?:0|[1-9]\d{0,11})(?:[.,]\d{1,2})?$/, 'En fazla 12 tam ve 2 ondalık basamak girin; binlik ayırıcı kullanmayın.')
   .transform((value) => {
     const [whole, fraction = ''] = value.replace(',', '.').split('.')
