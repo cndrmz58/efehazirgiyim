@@ -244,16 +244,21 @@ td { padding: 0; }
 .firm-empty-state h3 { color: #354c3e; font-size: 14px; font-weight: 650; }
 .firm-empty-state p { margin-top: 7px; color: #65746d; font-size: 12px; line-height: 1.7; }
 .firm-backend-note { margin-top: 12px; }
+.workspace main:has(.cashbook-page) { padding-top: 18px; }
+.cashbook-page .page-heading { flex-direction: row; align-items: center; gap: 12px; margin-bottom: 12px; }
+.cashbook-page h1 { font-size: clamp(24px, 2.4vw, 28px); }
 .cashbook-add-button { flex-shrink: 0; }
+.cashbook .table-card-heading { padding: 14px 20px; }
+.cashbook th { padding-block: 12px; }
 .cashbook table { min-width: 720px; }
 .cashbook th:nth-child(2) { width: 40%; }
 .cashbook-backend-note { margin-top: 12px; }
-.cashbook-selected-month { margin-top: 8px; color: #28523b; font-size: 18px; font-weight: 650; }
-.cashbook-balance { margin-bottom: 24px; }
-.cashbook-balance .field-help { margin-top: 8px; }
-.cashbook-balance dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin: 20px 0 0; }
-.cashbook-balance dt { color: #65746d; font-size: 12px; }
-.cashbook-balance dd { margin: 8px 0 0; font-size: clamp(18px, 2vw, 26px); font-weight: 650; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.cashbook-balance { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr); align-items: center; gap: 10px 24px; padding: 16px 20px; margin-bottom: 16px; }
+.cashbook-balance > div .field-help { margin-top: 5px; }
+.cashbook-balance > .field-help { grid-column: 1 / -1; }
+.cashbook-balance dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 0; }
+.cashbook-balance dt { color: #65746d; font-size: 11px; }
+.cashbook-balance dd { margin: 4px 0 0; font-size: clamp(18px, 1.8vw, 24px); font-weight: 650; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .cashbook-current-balance { padding-left: 18px; border-left: 2px solid #297b68; }
 .cashbook .payment-row td { white-space: pre-wrap; overflow-wrap: anywhere; }
 .cashbook .payment-row .amount-cell { white-space: nowrap; }
@@ -270,6 +275,7 @@ td { padding: 0; }
 
 @media (max-width: 1100px) {
   .cashbook-month-bar { left: 224px; }
+  .cashbook-balance { grid-template-columns: minmax(0, 1fr); gap: 12px; }
   .sidebar { width: 224px; padding-inline: 12px; }
   main { padding-inline: 24px; }
   .workspace-header { padding-inline: 24px; }
@@ -284,8 +290,11 @@ td { padding: 0; }
 
 @media (max-width: 767px) {
   .cashbook-month-bar { left: 0; padding-inline: calc(12px + env(safe-area-inset-left)) calc(12px + env(safe-area-inset-right)); }
-  .cashbook-balance dl { grid-template-columns: 1fr; gap: 16px; }
-  .cashbook-current-balance { border-left: 0; border-top: 2px solid #297b68; padding: 16px 0 0; }
+  .cashbook-balance.settings-card { padding: 14px 16px; margin-bottom: 12px; }
+  .cashbook-balance dl { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; }
+  .cashbook-current-balance { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; border-left: 0; border-top: 1px solid #dce5df; padding: 10px 0 0; }
+  .cashbook-current-balance dt { color: #28523b; font-weight: 650; }
+  .cashbook-current-balance dd { margin: 0; }
   html { scroll-padding-top: calc(84px + env(safe-area-inset-top)); }
   body.menu-open { overflow: hidden; }
   .app-shell { flex-direction: column; }
@@ -320,7 +329,7 @@ td { padding: 0; }
   .payments-page .page-heading { margin-bottom: 16px; }
   .page-heading > div:last-child:has(.button-primary) { width: 100%; }
   .firm-add-button { width: 100%; }
-  .cashbook-add-button { width: 100%; }
+  .cashbook-add-button.button-primary { width: auto; padding-inline: 12px; }
   .button-primary { width: 100%; }
   .table-card-heading { padding: 18px 16px; flex-wrap: wrap; }
   .table-filters { padding: 14px 16px; gap: 12px 10px; }

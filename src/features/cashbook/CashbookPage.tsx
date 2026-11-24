@@ -22,12 +22,7 @@ export function CashbookPage({ entries = null }: { entries?: readonly CashbookEn
   return (
     <div className="cashbook-page">
       <header className="page-heading">
-        <div>
-          <p className="eyebrow">{text.eyebrow}</p>
-          <h1>{tr.navigation.cashbook}</h1>
-          <p className="cashbook-selected-month" aria-live="polite">{selectedPeriod.label}</p>
-          <p className="page-description">{text.description}</p>
-        </div>
+        <h1>{tr.navigation.cashbook}</h1>
         <button type="button" className="button-primary cashbook-add-button" disabled aria-describedby="cashbook-backend-note">
           <Plus size={17} aria-hidden="true" />
           {text.add}
