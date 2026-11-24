@@ -248,6 +248,11 @@ td { padding: 0; }
 .cashbook-page .page-heading { flex-direction: row; align-items: center; gap: 12px; margin-bottom: 12px; }
 .cashbook-page h1 { font-size: clamp(24px, 2.4vw, 28px); }
 .cashbook-add-button { flex-shrink: 0; }
+.cashbook-dialog { width: min(660px, calc(100vw - 32px)); max-width: none; max-height: min(88dvh, 760px); padding: 0; border: 0; border-radius: 12px; overflow: auto; background: transparent; color: inherit; }
+.cashbook-dialog::backdrop { background: #15241db8; backdrop-filter: blur(2px); }
+.cashbook-dialog .payment-editor { margin: 0; padding: clamp(18px, 3vw, 28px); border: 1px solid #dce5df; box-shadow: 0 24px 70px #10231c40; }
+.cashbook-dialog .payment-form-grid { margin-top: 16px; gap: 14px; }
+.cashbook-dialog .form-actions { margin-top: 18px; }
 .cashbook .table-card-heading { padding: 14px 20px; }
 .cashbook th { padding-block: 12px; }
 .cashbook table { min-width: 720px; }

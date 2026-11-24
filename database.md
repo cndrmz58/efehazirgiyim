@@ -34,16 +34,24 @@ already-applied migration. SQL regression tests live in
   independent, organization-scoped TL entries with accountant-only writes and
   append-only auditing. Migration and operator activation require hosted
   application before the new frontend is used; not yet verified in production.
+- [Cashbook transaction types](./supabase/migrations/20261124160000_cashbook_entry_types.sql):
+  restricts transaction types to the owner-approved, alphabetically ordered
+  choices. The SQL Editor companion refuses to reclassify any existing records.
 
 ## Approved manual cashbook (`public.cashbook_entries`)
 
 The cashbook is independent of payments. Each record belongs to one organization
 and contains a finite `entry_on` date, nonblank `description` (up to 2,000
-characters), nonblank free-text `entry_type` (up to 100 characters), and exact
+characters), one approved `entry_type` and exact
 TL `incoming` / `outgoing` decimal values. Exactly one direction must be positive;
 the other must be zero. Both must be below `1000000000000` with at most two
 fractional digits. Unconstrained `numeric` plus checks rejects excess precision
 instead of rounding it. API reads cast money to text; the UI uses `bigint`.
+Transaction types (Turkish alphabetical order) are `Avans`, `Diğer`, `Fazla
+Mesai`, `Gelen Para`, `Kasa (Devir)`, `Maaş Ödemesi`, `Mutfak Masrafı`, `Yemek`,
+and `Yol Ücreti`. Both the app and PostgreSQL enforce this closed set. Before
+applying the type constraint, review existing rows; the migration fails safely
+and lists any unrecognized values instead of changing financial records.
 The selected month's balance is incoming minus outgoing, with no carry-forward.
 The existing November 2026–December 2027 month bar is preserved.
 
@@ -67,6 +75,12 @@ Deployment: apply `20261124140000_cashbook.sql` after all existing migrations,
 then run [enable_cashbook.sql](./supabase/operators/enable_cashbook.sql) as the
 database owner. The operator script only replaces cashbook-role assignments in
 the resolved organization; payment and administrator roles remain unchanged.
+For an already-installed cashbook, run
+[cashbook_entry_types.sql](./supabase/operators/cashbook_entry_types.sql) in
+SQL Editor before deploying the matching frontend. It replaces the initial
+free-text check with the approved choices and records migration `20261124160000`.
+It first lists any existing unapproved types and aborts without changing rows;
+review those records rather than silently reclassifying them.
 For SQL Editor deployment, wrap both files in one transaction and record version
 `20261124140000` in `supabase_migrations.schema_migrations`, following the manual
 deployment procedure below. Do not run regression-test fixtures in production.

@@ -56,7 +56,11 @@ owner-designated accounting account, assigned the separate `cashbook_role` by
 trusted operator SQL, can add, edit, or delete. Organization admins and payment
 managers are read-only unless explicitly assigned that cashbook role.
 There is no automatic integration with payments. Each row has a required date,
-description, free-text transaction type, and exactly one positive TL direction;
+description, and one alphabetically sorted transaction type: Avans, Diğer,
+Fazla Mesai, Gelen Para, Kasa (Devir), Maaş Ödemesi, Mutfak Masrafı, Yemek, or
+Yol Ücreti. The SQL constraint enforces the same list. The compact add/edit
+form opens in a keyboard-accessible dialog instead of expanding across the
+page. Each row has exactly one positive TL direction;
 the other amount must be zero. Enter records within the selected month; cancel
 the form and switch months to enter another month. Select the organization
 explicitly when multiple memberships exist; balances never combine organizations.
@@ -85,7 +89,12 @@ changes. Failed, invalid or row-limit-truncated responses never produce totals.
    either is missing or ambiguous. It replaces only cashbook-role assignments
    within that organization, never payment/admin permissions, and adds no users
    or financial records.
-3. Deploy the frontend using the existing Supabase public environment values.
+3. If Kasa Defteri is already installed, run
+   [cashbook_entry_types.sql](./supabase/operators/cashbook_entry_types.sql)
+   once in Supabase SQL Editor. It records migration `20261124160000` and
+   rejects unrecognized existing transaction types without rewriting any
+   records. If it reports values, review those existing rows before continuing.
+   Then deploy the frontend using the existing Supabase public environment values.
    No additional key or backend service is needed. Verify accounting-account
    CRUD and another active member's read-only access in the deployed app.
 

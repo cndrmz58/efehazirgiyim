@@ -1,12 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import type { Failure, Result } from '../payments/payment-repository'
-import { cashbookRecordSchema, type CashbookInput, type CashbookRecord } from './cashbook-model'
+import { cashbookEntryTypeSchema, cashbookRecordSchema, type CashbookInput, type CashbookRecord } from './cashbook-model'
 
 const columns = 'id, organization_id, entry_on, description, entry_type, incoming::text, outgoing::text, revision, created_at, updated_at'
 const rowSchema = z.object({
   id: z.uuid(), organization_id: z.uuid(), entry_on: z.string(),
-  description: z.string(), entry_type: z.string(), incoming: z.string(), outgoing: z.string(),
+  description: z.string(), entry_type: cashbookEntryTypeSchema, incoming: z.string(), outgoing: z.string(),
   revision: z.number(), created_at: z.string(), updated_at: z.string(),
 }).transform((row) => ({
   id: row.id, organizationId: row.organization_id, date: row.entry_on,

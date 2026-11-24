@@ -1,5 +1,5 @@
 import { BookOpen, Plus } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { tr } from '../../locales/tr'
 import { formatMoney, toMinorUnits } from '../payments/payment-model'
 import { summarizeCashbookMonth, type CashbookEntry } from './cashbook-model'
@@ -14,13 +14,46 @@ const periods = [
   })),
 ]
 
-export function CashbookPage({ entries = null, canEdit = false, busy = false, editing = false, editor, notice, onAdd, onEdit, onDelete }: {
+function CashbookEditorDialog({ children, busy, onDismiss }: {
+  children: ReactNode
+  busy: boolean
+  onDismiss: () => void
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null)
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
+    if (typeof dialog.showModal === 'function') dialog.showModal()
+    else dialog.setAttribute('open', '')
+    return () => {
+      if (typeof dialog.close === 'function' && dialog.open) dialog.close()
+      else dialog.removeAttribute('open')
+    }
+  }, [])
+
+  function dismiss(event: MouseEvent<HTMLDialogElement>) {
+    if (event.target === event.currentTarget && !busy) onDismiss()
+  }
+
+  return <dialog ref={dialogRef} className="cashbook-dialog" aria-labelledby="cashbook-form-heading"
+    onClick={dismiss}
+    onCancel={(event) => {
+      event.preventDefault()
+      if (!busy) onDismiss()
+    }}>
+    {children}
+  </dialog>
+}
+
+export function CashbookPage({ entries = null, canEdit = false, busy = false, editing = false, editor, notice, onEditorCancel, onAdd, onEdit, onDelete }: {
   entries?: readonly CashbookEntry[] | null
   canEdit?: boolean
   busy?: boolean
   editing?: boolean
   editor?: ReactNode
   notice?: ReactNode
+  onEditorCancel?: () => void
   onAdd?: (period: string) => void
   onEdit?: (id: string, period: string) => void
   onDelete?: (id: string) => void
@@ -39,7 +72,7 @@ export function CashbookPage({ entries = null, canEdit = false, busy = false, ed
         </button>
       </header>
       {notice}
-      {editor}
+      {editor && <CashbookEditorDialog busy={busy} onDismiss={() => onEditorCancel?.()}>{editor}</CashbookEditorDialog>}
       <section className="settings-card cashbook-balance" aria-label={text.balanceSummary} aria-live="polite">
         <div>
           <h2>{selectedPeriod.label} — {text.balance}</h2>

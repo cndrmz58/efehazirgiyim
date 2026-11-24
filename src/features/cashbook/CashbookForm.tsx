@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { z } from 'zod'
 import { tr } from '../../locales/tr'
 import { TurkishDateInput } from '../payments/TurkishDateInput'
-import { cashbookInputSchema, type CashbookInput, type CashbookRecord } from './cashbook-model'
+import { cashbookEntryTypes, cashbookInputSchema, type CashbookInput, type CashbookRecord } from './cashbook-model'
 import type { CashbookOrganization } from './cashbook-repository'
 
 export function CashbookForm({ original, organization, period, busy, onSave, onCancel }: {
@@ -14,14 +14,15 @@ export function CashbookForm({ original, organization, period, busy, onSave, onC
   onCancel: () => void
 }) {
   const text = tr.cashbook
-  const [values, setValues] = useState<CashbookInput>(original ?? {
+  type FormValues = Omit<CashbookInput, 'type'> & { type: string }
+  const [values, setValues] = useState<FormValues>(original ?? {
     organizationId: organization.id, date: `${period}-01`, description: '', type: '', incoming: '0', outgoing: '0',
   })
   const [errors, setErrors] = useState<Partial<Record<keyof CashbookInput, string[]>>>({})
   const firstInput = useRef<HTMLTextAreaElement>(null)
   useEffect(() => { firstInput.current?.focus() }, [])
 
-  function field(name: 'description' | 'type' | 'incoming' | 'outgoing') {
+  function field(name: 'description' | 'incoming' | 'outgoing') {
     return {
       id: `cashbook-${name}`, value: values[name],
       'aria-invalid': Boolean(errors[name]),
@@ -64,7 +65,13 @@ export function CashbookForm({ original, organization, period, busy, onSave, onC
           {error('date')}
         </div>
         <label className="form-field" htmlFor="cashbook-type">{text.type}
-          <input {...field('type')} maxLength={100} required />
+          <select id="cashbook-type" value={values.type} required
+            aria-invalid={Boolean(errors.type)}
+            aria-describedby={errors.type ? 'cashbook-type-error' : undefined}
+            onChange={(event) => setValues({ ...values, type: event.target.value })}>
+            <option value="">{text.typePlaceholder}</option>
+            {cashbookEntryTypes.map((type) => <option key={type} value={type}>{type}</option>)}
+          </select>
           {error('type')}
         </label>
         <label className="form-field" htmlFor="cashbook-incoming">{text.incoming}

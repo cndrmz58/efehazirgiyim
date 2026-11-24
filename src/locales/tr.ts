@@ -29,6 +29,7 @@ export const tr = {
     date: 'Tarih',
     descriptionColumn: 'Açıklama',
     type: 'İşlem Türü',
+    typePlaceholder: 'İşlem türü seçin',
     incoming: 'Borç (Giren)',
     outgoing: 'Alacak (Çıkan)',
     emptyTitle: 'Henüz kasa kaydı yok',

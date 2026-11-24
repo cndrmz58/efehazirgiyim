@@ -122,6 +122,7 @@ export function CashbookWorkspace({ client }: { client: SupabaseClient | null })
       if (original && organization?.canEdit) { setFeedback(''); setActionError(null); setEditor({ original, period, organizationId: organization.id }) }
     }}
     onDelete={(id) => { void remove(id) }}
+    onEditorCancel={() => { setEditor(null); setActionError(null) }}
     editor={editor && <CashbookForm key={`${editor.original?.id ?? 'new'}-${editor.organizationId}`}
       original={editor.original}
       organization={{ id: editor.organizationId, name: organizations.find(({ id }) => id === editor.organizationId)?.name ?? '', canEdit: true }}

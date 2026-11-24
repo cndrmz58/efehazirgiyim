@@ -3,11 +3,17 @@ import { decimalAmountSchema, toMinorUnits } from '../payments/payment-model'
 
 const amountSchema = z.string().regex(/^(?:0|[1-9]\d{0,11})\.\d{2}$/, 'Tutar, en fazla 12 tam ve tam 2 ondalık basamak içermeli.')
 
+export const cashbookEntryTypes = [
+  'Avans', 'Diğer', 'Fazla Mesai', 'Gelen Para', 'Kasa (Devir)',
+  'Maaş Ödemesi', 'Mutfak Masrafı', 'Yemek', 'Yol Ücreti',
+] as const
+export const cashbookEntryTypeSchema = z.enum(cashbookEntryTypes)
+
 export const cashbookEntrySchema = z.object({
   id: z.string().min(1),
   date: z.iso.date(),
   description: z.string(),
-  type: z.string(),
+  type: cashbookEntryTypeSchema,
   incoming: amountSchema,
   outgoing: amountSchema,
 })
@@ -18,7 +24,7 @@ export const cashbookInputSchema = z.object({
   organizationId: z.uuid('Şirket seçin.'),
   date: z.iso.date('Geçerli bir tarih girin.'),
   description: z.string().trim().min(1, 'Açıklama girin.').max(2000, 'En fazla 2000 karakter girin.'),
-  type: z.string().trim().min(1, 'İşlem türünü girin.').max(100, 'En fazla 100 karakter girin.'),
+  type: cashbookEntryTypeSchema,
   incoming: decimalAmountSchema,
   outgoing: decimalAmountSchema,
 }).superRefine((entry, context) => {

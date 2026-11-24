@@ -9,8 +9,20 @@ test('muhasebeci kasa ekler, yeniler, düzenler ve denetim uyarısıyla siler', 
   const form = page.getByRole('form', { name: 'Kasa kayıt formu' })
   await expect(page.getByRole('button', { name: 'Kayıt ekle' })).toBeEnabled()
   await page.getByRole('button', { name: 'Kayıt ekle' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Kayıt ekle' })
+  await expect(dialog).toBeVisible()
+  const dialogSize = await dialog.evaluate((element) => ({ width: element.clientWidth, height: element.clientHeight }))
+  expect(dialogSize.width).toBeLessThan(700)
+  expect(dialogSize.height).toBeLessThan(800)
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+  await page.getByRole('button', { name: 'Kayıt ekle' }).click()
   await form.getByLabel('Açıklama').fill('Kasaya nakit giriş')
-  await form.getByLabel('İşlem Türü').fill('Nakit')
+  await form.getByLabel('İşlem Türü').selectOption('Yemek')
+  await expect(form.getByLabel('İşlem Türü').locator('option')).toHaveText([
+    'İşlem türü seçin', 'Avans', 'Diğer', 'Fazla Mesai', 'Gelen Para', 'Kasa (Devir)',
+    'Maaş Ödemesi', 'Mutfak Masrafı', 'Yemek', 'Yol Ücreti',
+  ])
   await form.getByLabel('Tarih', { exact: true }).fill('24.11.2026')
   await form.getByLabel('Borç (Giren)').fill('0,10')
   await form.getByRole('button', { name: 'Kaydet', exact: true }).click()

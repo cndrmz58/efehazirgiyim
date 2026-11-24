@@ -8,7 +8,7 @@ const userId = '00000000-0000-4000-8000-000000000001'
 const organizationId = '00000000-0000-4000-8000-000000000011'
 const row = {
   id: '00000000-0000-4000-8000-000000000031', organization_id: organizationId,
-  entry_on: '2026-11-24', description: 'Kasa girişi', entry_type: 'Nakit',
+  entry_on: '2026-11-24', description: 'Kasa girişi', entry_type: 'Yemek',
   incoming: '100.1', outgoing: '0', revision: 1,
   created_at: '2026-11-24T10:00:00+00:00', updated_at: '2026-11-24T10:00:00+00:00',
 }
@@ -89,14 +89,14 @@ describe('Supabase kasa bağlantısı', () => {
     await user.click(screen.getByRole('button', { name: 'Kayıt ekle' }))
     const form = within(screen.getByRole('form'))
     await user.type(form.getByLabelText('Açıklama'), 'Yeni giriş')
-    await user.type(form.getByLabelText('İşlem Türü'), 'Nakit')
+    await user.selectOptions(form.getByLabelText('İşlem Türü'), 'Yemek')
     await user.clear(form.getByLabelText('Borç (Giren)'))
     await user.type(form.getByLabelText('Borç (Giren)'), '12,5')
     await user.click(form.getByRole('button', { name: 'Kaydet' }))
     expect(await screen.findByText('Kasa kaydı kaydedildi.')).toBeVisible()
     expect(requests.find(({ method }) => method === 'POST')?.body).toEqual({
       organization_id: organizationId, entry_on: '2026-11-01',
-      description: 'Yeni giriş', entry_type: 'Nakit', incoming: '12.50', outgoing: '0.00',
+      description: 'Yeni giriş', entry_type: 'Yemek', incoming: '12.50', outgoing: '0.00',
     })
   })
 

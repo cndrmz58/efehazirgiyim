@@ -47,7 +47,7 @@ do $$
 declare created public.cashbook_entries; changed integer; value numeric;
 begin
   insert into public.cashbook_entries (organization_id, entry_on, description, entry_type, incoming, outgoing)
-  values ('00000000-0000-4000-8000-000000000011', '2026-11-24', 'Receipt', 'Cash', '999999999999.99', '0')
+  values ('00000000-0000-4000-8000-000000000011', '2026-11-24', 'Receipt', 'Gelen Para', '999999999999.99', '0')
   returning * into created;
   perform set_config('test.cashbook_id', created.id::text, true);
   if created.revision <> 1 or created.created_by <> auth.uid()
@@ -56,40 +56,46 @@ begin
   foreach value in array array[-1, 0, 0.001, 1.000, 1000000000000, 'NaN'::numeric, 'Infinity'::numeric] loop
     begin
       insert into public.cashbook_entries (organization_id, entry_on, description, entry_type, incoming, outgoing)
-      values (created.organization_id, '2026-11-24', 'Invalid amount', 'Cash', value, 0);
+      values (created.organization_id, '2026-11-24', 'Invalid amount', 'Avans', value, 0);
       raise exception 'Invalid amount accepted: %', value;
     exception when check_violation then null;
     end;
     begin
       insert into public.cashbook_entries (organization_id, entry_on, description, entry_type, incoming, outgoing)
-      values (created.organization_id, '2026-11-24', 'Invalid outgoing', 'Cash', 0, value);
+      values (created.organization_id, '2026-11-24', 'Invalid outgoing', 'Avans', 0, value);
       raise exception 'Invalid outgoing accepted: %', value;
     exception when check_violation then null;
     end;
   end loop;
   begin
     insert into public.cashbook_entries (organization_id, entry_on, description, entry_type, incoming, outgoing)
-    values (created.organization_id, '2026-11-24', 'Two directions', 'Cash', 1, 1);
+    values (created.organization_id, '2026-11-24', 'Two directions', 'Avans', 1, 1);
     raise exception 'Two positive directions accepted';
   exception when check_violation then null;
   end;
   begin
     insert into public.cashbook_entries (organization_id, entry_on, description, entry_type, incoming, outgoing)
-    values (created.organization_id, 'infinity', 'Invalid date', 'Cash', 1, 0);
+    values (created.organization_id, 'infinity', 'Invalid date', 'Avans', 1, 0);
     raise exception 'Infinite date accepted';
   exception when check_violation then null;
   end;
   begin
     insert into public.cashbook_entries (organization_id, entry_on, description, entry_type, incoming, outgoing)
-    values (created.organization_id, '2026-11-24', E' \t\n', 'Cash', 1, 0);
+    values (created.organization_id, '2026-11-24', E' \t\n', 'Avans', 1, 0);
     raise exception 'Blank description accepted';
   exception when check_violation then null;
   end;
   begin
     insert into public.cashbook_entries (organization_id, entry_on, description, entry_type, incoming, outgoing)
-    values ('00000000-0000-4000-8000-000000000012', '2026-11-24', 'Foreign', 'Cash', 1, 0);
+    values ('00000000-0000-4000-8000-000000000012', '2026-11-24', 'Foreign', 'Avans', 1, 0);
     raise exception 'Cross-organization insert succeeded';
   exception when insufficient_privilege then null;
+  end;
+  begin
+    insert into public.cashbook_entries (organization_id, entry_on, description, entry_type, incoming, outgoing)
+    values (created.organization_id, '2026-11-24', 'Unlisted type', 'Nakit', 1, 0);
+    raise exception 'Unlisted transaction type accepted';
+  exception when check_violation then null;
   end;
   begin
     update public.cashbook_entries set organization_id = '00000000-0000-4000-8000-000000000012';
@@ -129,7 +135,7 @@ begin
     if (select count(*) from public.cashbook_entries) <> 1 then raise exception 'Member cannot read'; end if;
     begin
       insert into public.cashbook_entries (organization_id, entry_on, description, entry_type, incoming, outgoing)
-      values ('00000000-0000-4000-8000-000000000011', '2026-11-24', 'Reader', 'Cash', 1, 0);
+      values ('00000000-0000-4000-8000-000000000011', '2026-11-24', 'Reader', 'Avans', 1, 0);
       raise exception 'Reader inserted';
     exception when insufficient_privilege then null;
     end;
@@ -162,7 +168,7 @@ begin
     if changed <> 0 then raise exception 'Unauthorized delete'; end if;
     begin
       insert into public.cashbook_entries (organization_id, entry_on, description, entry_type, incoming, outgoing)
-      values ('00000000-0000-4000-8000-000000000011', '2026-11-24', 'Unauthorized', 'Cash', 1, 0);
+      values ('00000000-0000-4000-8000-000000000011', '2026-11-24', 'Unauthorized', 'Avans', 1, 0);
       raise exception 'Unauthorized insert';
     exception when insufficient_privilege then null;
     end;
