@@ -42,8 +42,26 @@ implemented. TL is the default currency
 for both new records and the initial table filter. New or edited records become
 visible by resetting other filters and selecting that record's currency.
 
-**Ödemeler**, **Genel Bakış**, and the UI-only **Firmalar** directory are
-selectable in the sidebar. The other entries, including **Ayarlar**, remain
+The **Kasa Defteri** (`/cashbook`) is also an approved UI-only prototype, with
+Tarih, Açıklama, İşlem Türü, Borç (Giren), and Alacak (Çıkan) columns.
+It shows an empty, horizontally scrollable table without sample transactions.
+An always-visible bottom month bar switches the displayed period from
+Kasım 2026 through Aralık 2027 (14 months). The bar scrolls horizontally on
+smaller screens. The initial selection is Kasım 2026; month selection is
+UI-only and resets on page reload.
+Adding records is disabled until its backend and data contract are approved
+and implemented. It does not store records or integrate with payments.
+The header displays the selected month and a TL cash summary. The UI calculation
+uses only records dated in that exact year and month: balance = incoming − outgoing,
+without automatically carrying a previous month's balance. Amounts use validated
+decimal strings and exact `bigint` minor-unit arithmetic, including negative
+balances. The table and summary use the same filtered records. Until a backend
+provides actual cashbook records, totals display `—` with an explicit unavailable
+notice, not a fabricated zero balance. The internal UI record shape is not an
+approved database schema; persistence and access policies remain deferred.
+
+**Ödemeler**, **Genel Bakış**, the UI-only **Firmalar** directory, and
+**Kasa Defteri** are selectable in the sidebar. The other entries, including **Ayarlar**, remain
 visible but disabled.
 
 ### Using the payment table

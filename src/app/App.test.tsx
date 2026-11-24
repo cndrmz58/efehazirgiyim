@@ -46,7 +46,7 @@ describe('Türkçe ödeme çalışma alanı', () => {
     expect(screen.queryByRole('region', { name: 'Bildirimler' })).not.toBeInTheDocument()
   })
 
-  it('yalnızca Genel Bakış ve Ödemeler ile gezinir ve mobil menüyü kapatır', async () => {
+  it('kullanılabilir sayfalarla gezinir ve mobil menüyü kapatır', async () => {
     const user = userEvent.setup()
     renderApp()
     const menu = within(screen.getByRole('navigation', { name: 'Ana menü' }))
@@ -54,7 +54,7 @@ describe('Türkçe ödeme çalışma alanı', () => {
     await user.click(screen.getByRole('button', { name: 'Menüyü aç' }))
     expect(screen.getByRole('button', { name: 'Menüyü kapat' })).toHaveAttribute('aria-expanded', 'true')
 
-    expect(menu.getAllByRole('link').map((link) => link.textContent)).toEqual(['Genel Bakış', 'Ödemeler', 'Firmalar'])
+    expect(menu.getAllByRole('link').map((link) => link.textContent)).toEqual(['Genel Bakış', 'Ödemeler', 'Kasa Defteri', 'Firmalar'])
     for (const name of ['Tahsilatlar', 'Takvim', 'Departmanlar', 'Belgeler', 'Kullanıcı Yönetimi', 'Ayarlar']) {
       const item = menu.getByRole('button', { name })
       expect(item).toBeDisabled()
@@ -66,6 +66,11 @@ describe('Türkçe ödeme çalışma alanı', () => {
     await user.click(menu.getByRole('link', { name: 'Genel Bakış' }))
     expect(screen.getByRole('button', { name: 'Menüyü aç' })).toHaveAttribute('aria-expanded', 'false')
     expect(screen.getByRole('heading', { name: 'Genel Bakış', level: 1 })).toBeVisible()
+
+    await user.click(screen.getByRole('button', { name: 'Menüyü aç' }))
+    await user.click(menu.getByRole('link', { name: 'Kasa Defteri' }))
+    expect(screen.getByRole('button', { name: 'Menüyü aç' })).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByRole('heading', { name: 'Kasa Defteri', level: 1 })).toBeVisible()
 
     await user.click(screen.getByRole('button', { name: 'Menüyü aç' }))
     await user.click(menu.getByRole('link', { name: 'Ödemeler' }))
@@ -81,6 +86,46 @@ describe('Türkçe ödeme çalışma alanı', () => {
     expect(screen.getByRole('heading', { name: 'Henüz firma kaydı yok' })).toBeVisible()
     expect(screen.getByRole('button', { name: 'Firma ekle' })).toBeDisabled()
     expect(screen.getByText(/backend bağlantısı tamamlandığında açılacak/)).toBeVisible()
+  })
+
+  it('Kasa Defterini beş sütunlu ve kayıt işlemleri kapalı bir prototip olarak açar', () => {
+    renderApp('/cashbook')
+
+    expect(screen.getByRole('heading', { name: 'Kasa Defteri', level: 1 })).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Kasa Defteri' })).toHaveClass('nav-link-active')
+    const table = within(screen.getByRole('table', { name: 'Kasa hareketleri' }))
+    expect(table.getAllByRole('columnheader').map((header) => header.textContent)).toEqual([
+      'Tarih', 'Açıklama', 'İşlem Türü', 'Borç (Giren)', 'Alacak (Çıkan)',
+    ])
+    expect(table.getAllByRole('row')).toHaveLength(2)
+    expect(table.getByRole('heading', { name: 'Henüz kasa kaydı yok' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Kayıt ekle' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Kayıt ekle' })).toHaveAccessibleDescription(/yalnızca arayüz prototipidir/)
+    expect(screen.getByRole('region', { name: 'Yatay kaydırılabilir kasa defteri tablosu' })).toHaveAttribute('tabindex', '0')
+  })
+
+  it('Kasım 2026 ile Aralık 2027 arasında ay seçimini ve tablo başlığını değiştirir', async () => {
+    const user = userEvent.setup()
+    renderApp('/cashbook')
+    const months = within(screen.getByRole('navigation', { name: 'Kasa defteri ayları' }))
+    expect(months.getAllByRole('button').map((button) => button.textContent)).toEqual([
+      'Kasım 2026', 'Aralık 2026', 'Ocak 2027', 'Şubat 2027', 'Mart 2027', 'Nisan 2027',
+      'Mayıs 2027', 'Haziran 2027', 'Temmuz 2027', 'Ağustos 2027', 'Eylül 2027',
+      'Ekim 2027', 'Kasım 2027', 'Aralık 2027',
+    ])
+    expect(months.getByRole('button', { name: 'Kasım 2026', pressed: true })).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Kasım 2026 — Kasa hareketleri' })).toBeVisible()
+
+    await user.click(months.getByRole('button', { name: 'Aralık 2026' }))
+    expect(screen.getByRole('heading', { name: 'Aralık 2026 — Kasa hareketleri' })).toBeVisible()
+    await user.click(months.getByRole('button', { name: 'Ocak 2027' }))
+    expect(screen.getByRole('heading', { name: 'Ocak 2027 — Kasa hareketleri' })).toBeVisible()
+    await user.click(months.getByRole('button', { name: 'Aralık 2027' }))
+    expect(months.getAllByRole('button', { pressed: true })).toHaveLength(1)
+    expect(months.getByRole('button', { name: 'Aralık 2027', pressed: true })).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Aralık 2027 — Kasa hareketleri' })).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Henüz kasa kaydı yok' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Kayıt ekle' })).toBeDisabled()
   })
 
   it('Ayarlar doğrudan açıldığında manuel kurun henüz çalışmadığını belirtir', () => {

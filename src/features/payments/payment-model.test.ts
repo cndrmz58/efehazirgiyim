@@ -15,6 +15,15 @@ function payment(overrides: Record<string, unknown> = {}) {
 }
 
 describe('ödeme doğrulaması ve özetleri', () => {
+  it.each([
+    [-1n, '-0,01 TL'],
+    [-10n, '-0,10 TL'],
+    [-100n, '-1,00 TL'],
+    [-123456n, '-1.234,56 TL'],
+  ] as const)('negatif %s kuruşu doğru biçimlendirir', (amount, formatted) => {
+    expect(formatMoney(amount, 'TRY')).toBe(formatted)
+  })
+
   it.each(['0', '-1', '1.005', '1.000,00', 'abc', '1e3', '1000000000000'])('geçersiz tutarı reddeder: %s', (amount) => {
     expect(paymentInputSchema.safeParse({ ...draft, amount }).success).toBe(false)
   })

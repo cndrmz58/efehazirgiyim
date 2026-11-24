@@ -1,5 +1,5 @@
 import {
-  ArrowDownLeft, ArrowUpRight, Building2, CalendarDays, ChevronRight,
+  ArrowDownLeft, ArrowUpRight, BookOpen, Building2, CalendarDays, ChevronRight,
   CircleHelp, Files, Handshake, LayoutGrid, Menu, Settings, ShieldCheck, X,
 } from 'lucide-react'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
@@ -10,6 +10,7 @@ import { PaymentsPage } from '../features/payments/PaymentsPage'
 import { SettingsPage } from '../features/settings/SettingsPage'
 import { OverviewPage } from '../features/overview/OverviewPage'
 import { FirmsPage } from '../features/firms/FirmsPage'
+import { CashbookPage } from '../features/cashbook/CashbookPage'
 import { PaymentsProvider } from '../features/payments/PaymentsProvider'
 import { getLoginClient, type AuthConfig } from '../features/auth/auth-client'
 import { AccountMenu } from '../components/AccountMenu'
@@ -20,6 +21,7 @@ import { tr } from '../locales/tr'
 const navigation = [
   { path: '/overview', label: tr.navigation.overview, icon: LayoutGrid },
   { path: '/payments', label: tr.navigation.payments, icon: ArrowUpRight },
+  { path: '/cashbook', label: tr.navigation.cashbook, icon: BookOpen },
   { path: '/collections', label: tr.navigation.collections, icon: ArrowDownLeft },
   { path: '/calendar', label: tr.navigation.calendar, icon: CalendarDays },
   { path: '/firms', label: tr.navigation.firms, icon: Handshake },
@@ -38,7 +40,7 @@ function PlannedPage({ title }: { title: string }) {
       <header className="page-heading"><div><p className="eyebrow">ÇALIŞMA ALANI</p><h1>{title}</h1></div></header>
       <section className="settings-card">
         <h2>Bu bölüm sonraki aşamada hazırlanacak</h2>
-        <p className="page-description">Şu anda ödeme tablosu, Genel Bakış ve Firmalar kullanılabilir.</p>
+        <p className="page-description">Şu anda ödeme tablosu, Genel Bakış, Firmalar ve Kasa Defteri arayüzü kullanılabilir.</p>
         <Link className="button-text inline-flex mt-5" to="/payments">Ödeme tablosuna dön <ChevronRight size={18} aria-hidden="true" /></Link>
       </section>
     </>
@@ -93,7 +95,7 @@ function Workspace({ environment, authConfig }: { environment: EnvironmentState;
         <nav aria-label="Ana menü">
           {navigation.map(({ path, label, icon: Icon }) => {
             const content = <><Icon size={19} aria-hidden="true" /><span>{label}</span></>
-            return path === '/overview' || path === '/payments' || path === '/firms' ? (
+            return path === '/overview' || path === '/payments' || path === '/firms' || path === '/cashbook' ? (
               <NavLink key={path} to={path} className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`} onClick={() => setMenuOpen(false)}>
                 {content}
               </NavLink>
@@ -125,8 +127,9 @@ function Workspace({ environment, authConfig }: { environment: EnvironmentState;
             <Route path="/payments" element={<PaymentsPage />} />
             <Route path="/overview" element={<OverviewPage />} />
             <Route path="/firms" element={<FirmsPage />} />
+            <Route path="/cashbook" element={<CashbookPage />} />
             <Route path="/settings" element={<SettingsPage />} />
-            {navigation.filter(({ path }) => !['/payments', '/settings', '/overview', '/firms'].includes(path)).map(({ path, label }) => (
+            {navigation.filter(({ path }) => !['/payments', '/settings', '/overview', '/firms', '/cashbook'].includes(path)).map(({ path, label }) => (
               <Route key={path} path={path} element={<PlannedPage title={label} />} />
             ))}
             <Route path="*" element={<PlannedPage title="Sayfa bulunamadı" />} />

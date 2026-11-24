@@ -74,9 +74,10 @@ export function toMinorUnits(amount: string): bigint {
 }
 
 export function formatMoney(minorUnits: bigint, currency: CurrencyCode): string {
-  const whole = new Intl.NumberFormat('tr-TR').format(minorUnits / 100n)
-  const fraction = (minorUnits % 100n).toString().padStart(2, '0')
-  return `${whole},${fraction} ${currency === 'TRY' ? 'TL' : currency}`
+  const absolute = minorUnits < 0n ? -minorUnits : minorUnits
+  const whole = new Intl.NumberFormat('tr-TR').format(absolute / 100n)
+  const fraction = (absolute % 100n).toString().padStart(2, '0')
+  return `${minorUnits < 0n ? '-' : ''}${whole},${fraction} ${currency === 'TRY' ? 'TL' : currency}`
 }
 
 export function summarizePayments(payments: readonly Payment[]) {
