@@ -79,9 +79,14 @@ export function CashbookPage({ entries = null, canEdit = false, busy = false, ed
           <p className="field-help">{text.balanceRule}</p>
         </div>
         <dl>
-          <div><dt>{text.incoming}</dt><dd>{summary ? formatMoney(summary.incoming, 'TRY') : '—'}</dd></div>
+          <div><dt>{text.incoming}</dt><dd className="cashbook-incoming-amount">{summary ? formatMoney(summary.incoming, 'TRY') : '—'}</dd></div>
           <div><dt>{text.outgoing}</dt><dd>{summary ? formatMoney(summary.outgoing, 'TRY') : '—'}</dd></div>
-          <div className="cashbook-current-balance"><dt>{text.balance}</dt><dd>{summary ? formatMoney(summary.balance, 'TRY') : '—'}</dd></div>
+          <div className="cashbook-current-balance">
+            <dt>{text.balance}</dt>
+            <dd className={summary && summary.balance > 0n ? 'cashbook-balance-positive' : summary && summary.balance < 0n ? 'cashbook-balance-negative' : undefined}>
+              {summary ? formatMoney(summary.balance, 'TRY') : '—'}
+            </dd>
+          </div>
         </dl>
         {!summary && <p className="field-help">{text.balanceUnavailable}</p>}
       </section>
@@ -108,7 +113,7 @@ export function CashbookPage({ entries = null, canEdit = false, busy = false, ed
                   <td><time dateTime={entry.date}>{entry.date.split('-').reverse().join('.')}</time></td>
                   <td>{entry.description}</td>
                   <td>{entry.type}</td>
-                  <td className="amount-cell">{formatMoney(toMinorUnits(entry.incoming), 'TRY')}</td>
+                  <td className="amount-cell cashbook-incoming-amount">{formatMoney(toMinorUnits(entry.incoming), 'TRY')}</td>
                   <td className="amount-cell">{formatMoney(toMinorUnits(entry.outgoing), 'TRY')}</td>
                   {canEdit && <td><div className="form-actions">
                     <button className="button-text" type="button" disabled={busy || editing} aria-label={`${text.edit}: ${entry.description}`} onClick={() => onEdit?.(entry.id, selectedPeriod.id)}>{text.edit}</button>

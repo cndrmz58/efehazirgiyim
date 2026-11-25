@@ -19,6 +19,9 @@ describe('kasa özeti', () => {
     const months = within(screen.getByRole('navigation', { name: 'Kasa defteri ayları' }))
     expect(summary.getByRole('heading', { name: 'Kasım 2026 — Güncel Bakiye' })).toBeVisible()
     expect(summary.getByText('20,07 TL')).toBeVisible()
+    expect(summary.getByText('20,07 TL')).toHaveClass('cashbook-balance-positive')
+    expect(summary.getByText('100,10 TL')).toHaveClass('cashbook-incoming-amount')
+    expect(table.getByText('100,10 TL')).toHaveClass('cashbook-incoming-amount')
     expect(table.getByText('Kasım hareketi')).toBeVisible()
     expect(table.queryByText('Aralık hareketi')).not.toBeInTheDocument()
     expect(table.queryByText('Gelecek yılın hareketi')).not.toBeInTheDocument()
@@ -26,6 +29,7 @@ describe('kasa özeti', () => {
     await user.click(months.getByRole('button', { name: 'Aralık 2026' }))
     expect(summary.getByRole('heading', { name: 'Aralık 2026 — Güncel Bakiye' })).toBeVisible()
     expect(summary.getByText('-0,01 TL')).toBeVisible()
+    expect(summary.getByText('-0,01 TL')).toHaveClass('cashbook-balance-negative')
     expect(table.getByText('Aralık hareketi')).toBeVisible()
     expect(table.queryByText('Kasım hareketi')).not.toBeInTheDocument()
 
@@ -36,6 +40,8 @@ describe('kasa özeti', () => {
 
     await user.click(months.getByRole('button', { name: 'Ocak 2027' }))
     expect(summary.getAllByText('0,00 TL')).toHaveLength(3)
+    expect(summary.getAllByText('0,00 TL')[2]).not.toHaveClass('cashbook-balance-positive')
+    expect(summary.getAllByText('0,00 TL')[2]).not.toHaveClass('cashbook-balance-negative')
     expect(table.getByRole('heading', { name: 'Henüz kasa kaydı yok' })).toBeVisible()
     await user.click(months.getByRole('button', { name: 'Kasım 2026' }))
     expect(summary.getByText('20,07 TL')).toBeVisible()

@@ -248,7 +248,7 @@ td { padding: 0; }
 .cashbook-page .page-heading { flex-direction: row; align-items: center; gap: 12px; margin-bottom: 12px; }
 .cashbook-page h1 { font-size: clamp(24px, 2.4vw, 28px); }
 .cashbook-add-button { flex-shrink: 0; }
-.cashbook-dialog { width: min(660px, calc(100vw - 32px)); max-width: none; max-height: min(88dvh, 760px); padding: 0; border: 0; border-radius: 12px; overflow: auto; background: transparent; color: inherit; }
+.cashbook-dialog { position: fixed; inset: 0; margin: auto; width: min(660px, calc(100vw - 32px)); max-width: none; max-height: min(88dvh, 760px); padding: 0; border: 0; border-radius: 12px; overflow: auto; background: transparent; color: inherit; }
 .cashbook-dialog::backdrop { background: #15241db8; backdrop-filter: blur(2px); }
 .cashbook-dialog .payment-editor { margin: 0; padding: clamp(18px, 3vw, 28px); border: 1px solid #dce5df; box-shadow: 0 24px 70px #10231c40; }
 .cashbook-dialog .payment-form-grid { margin-top: 16px; gap: 14px; }
@@ -264,6 +264,9 @@ td { padding: 0; }
 .cashbook-balance dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 0; }
 .cashbook-balance dt { color: #65746d; font-size: 11px; }
 .cashbook-balance dd { margin: 4px 0 0; font-size: clamp(18px, 1.8vw, 24px); font-weight: 650; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.cashbook-incoming-amount { color: #267348; font-weight: 750; }
+.cashbook-balance-positive { color: #267348; }
+.cashbook-balance-negative { color: #b42318; }
 .cashbook-current-balance { padding-left: 18px; border-left: 2px solid #297b68; }
 .cashbook .payment-row td { white-space: pre-wrap; overflow-wrap: anywhere; }
 .cashbook .payment-row .amount-cell { white-space: nowrap; }
