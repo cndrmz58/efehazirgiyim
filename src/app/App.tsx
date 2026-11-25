@@ -80,7 +80,9 @@ function Workspace({ environment, authConfig }: { environment: EnvironmentState;
     <div className="app-shell">
       <a className="skip-link" href="#main-content">İçeriğe geç</a>
       <header className="mobile-header">
-        <Link to="/payments" className="brand-link" onClick={() => setMenuOpen(false)}><span className="brand-mark">E</span><span>{tr.company}</span></Link>
+        <Link to="/payments" className="brand-link" onClick={() => setMenuOpen(false)}>
+          <img className="brand-logo" src="/efe-hazir-giyim-logo.png" alt="EFE Hazır Giyim" />
+        </Link>
         <button ref={menuButton} type="button" className="icon-button" aria-label={menuOpen ? 'Menüyü kapat' : 'Menüyü aç'} aria-expanded={menuOpen} aria-controls="primary-navigation" onClick={() => setMenuOpen(!menuOpen)}>
           {menuOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
         </button>
@@ -88,8 +90,7 @@ function Workspace({ environment, authConfig }: { environment: EnvironmentState;
 
       <aside className={`sidebar ${menuOpen ? 'sidebar-open' : ''}`} id="primary-navigation">
         <Link to="/payments" className="brand-link desktop-brand" onClick={() => setMenuOpen(false)}>
-          <span className="brand-mark">E</span>
-          <span><span className="brand-name">{tr.company}</span><span className="brand-subtitle">{tr.application}</span></span>
+          <img className="brand-logo" src="/efe-hazir-giyim-logo.png" alt="EFE Hazır Giyim" />
         </Link>
         <p className="navigation-label">ÇALIŞMA ALANI</p>
         <nav aria-label="Ana menü">

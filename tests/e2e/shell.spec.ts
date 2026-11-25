@@ -55,6 +55,38 @@ test('Kasa Defteri salt okunur olarak masaüstünde ve mobilde açılır', async
   await expect(monthBar.getByRole('button', { name: 'Kasım 2026' })).toHaveAttribute('aria-pressed', 'true')
 })
 
+test('kasa defteri kaydırılırken masaüstü menüsü sabit ve erişilebilir kalır', async ({ context, page, isMobile }) => {
+  test.skip(isMobile, 'Masaüstü yan menüsü için')
+  await page.setViewportSize({ width: 1100, height: 600 })
+  await mockSupabase(context)
+  const entries = Array.from({ length: 25 }, (_, index) => ({
+    id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+    organization_id: '00000000-0000-4000-8000-000000000011',
+    entry_on: '2026-11-24', description: `Kasa kaydı ${index + 1}`, entry_type: 'Gelen Para',
+    incoming: '1.00', outgoing: '0.00', revision: 1,
+    created_at: '2026-11-24T00:00:00Z', updated_at: '2026-11-24T00:00:00Z',
+  }))
+  await context.route('**/rest/v1/cashbook_entries**', (route) => route.fulfill({
+    json: entries, headers: {
+      'access-control-allow-origin': '*', 'access-control-expose-headers': 'content-range',
+      'content-range': `0-${entries.length - 1}/${entries.length}`,
+    },
+  }))
+  await signIn(page)
+  await page.goto('/cashbook')
+  await expect(page.getByText('Kasa kaydı 1', { exact: true })).toBeVisible()
+
+  const sidebar = page.locator('#primary-navigation')
+  const initialTop = await sidebar.evaluate((element) => element.getBoundingClientRect().top)
+  await page.mouse.move(900, 400)
+  await page.mouse.wheel(0, 1000)
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0)
+  expect(await sidebar.evaluate((element) => element.getBoundingClientRect().top)).toBe(initialTop)
+  expect(await sidebar.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true)
+  await sidebar.evaluate((element) => { element.scrollTop = element.scrollHeight })
+  await expect(sidebar.getByRole('button', { name: 'Ayarlar' })).toBeInViewport()
+})
+
 test('üretim çıktısında tablo ve gezinme ekran boyutuna uyum sağlar', async ({ context, page, isMobile }) => {
   await mockSupabase(context)
   await signIn(page)

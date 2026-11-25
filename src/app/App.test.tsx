@@ -19,6 +19,17 @@ function renderApp(path = '/', environment: EnvironmentState = { status: 'unconf
 }
 
 describe('Türkçe ödeme çalışma alanı', () => {
+  it('şirket logosunu masaüstü ve mobil marka bağlantılarında gösterir', () => {
+    renderApp()
+
+    const brandLinks = screen.getAllByRole('link', { name: 'EFE Hazır Giyim' })
+    expect(brandLinks).toHaveLength(2)
+    for (const link of brandLinks) {
+      expect(link).toHaveAttribute('href', '/payments')
+      expect(within(link).getByRole('img')).toHaveAttribute('src', '/efe-hazir-giyim-logo.png')
+    }
+  })
+
   it('veri bağlantısı yokken kayıt göstermez ve girişi kapatır', () => {
     renderApp()
 
