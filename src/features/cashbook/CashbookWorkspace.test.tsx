@@ -87,7 +87,7 @@ describe('Supabase kasa bağlantısı', () => {
     const { requests } = setup({ accountant: true })
     await waitFor(() => expect(screen.getByRole('button', { name: 'Kayıt ekle' })).toBeEnabled())
     await user.click(screen.getByRole('button', { name: 'Kayıt ekle' }))
-    expect(screen.getByRole('dialog')).toHaveClass('cashbook-dialog')
+    expect(screen.getByRole('dialog')).toHaveClass('editor-dialog')
     const form = within(screen.getByRole('form'))
     await user.type(form.getByLabelText('Açıklama'), 'Yeni giriş')
     await user.selectOptions(form.getByLabelText('İşlem Türü'), 'Yemek')

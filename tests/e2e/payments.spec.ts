@@ -24,6 +24,27 @@ async function addPayment(page: Page, detail: string, amount: string, currency: 
   await expect(form).toBeHidden()
 }
 
+test('ödeme penceresi ve sağdaki yenile düğmesi çalışır', async ({ page }) => {
+  const refresh = page.getByRole('button', { name: 'Yenile', exact: true })
+  await expect(refresh).toHaveClass(/button-secondary/)
+  await refresh.click()
+  await expect(page.getByRole('table')).toBeVisible()
+
+  const add = page.getByRole('button', { name: 'Ödeme Ekle', exact: true })
+  await add.click()
+  const dialog = page.getByRole('dialog', { name: 'Ödeme Ekle' })
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByLabel('Ödeme detayı')).toBeFocused()
+  await dialog.getByLabel('Ödeme detayı').fill('Taslak')
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+  await expect(add).toBeFocused()
+  await add.click()
+  await expect(dialog.getByLabel('Ödeme detayı')).toHaveValue('')
+  await dialog.getByRole('button', { name: 'Vazgeç' }).click()
+  await expect(dialog).toBeHidden()
+})
+
 test('vade tarihi tutardan sonra gösterilir ve gerçekleşen tarihten bağımsız saklanır', async ({ page, isMobile }) => {
   await addPayment(page, 'Vadeli örnek', '10', 'TRY', 'invoice', true)
   const list = isMobile ? page.getByLabel('Mobil ödeme listesi') : page.getByRole('table')
@@ -205,6 +226,7 @@ test('başka oturumda güncellenen kaydın üzerine eski düzenleme yazılmaz', 
   await staleForm.getByRole('button', { name: 'Değişiklikleri kaydet' }).click()
   await expect(page.getByRole('alert')).toContainText('başka bir kullanıcı tarafından değiştirilmiş')
   await expect(staleForm.locator('#payment-amount')).toHaveValue('99')
+  await staleForm.getByRole('button', { name: 'Vazgeç' }).click()
   const staleRecord = list.getByRole(isMobile ? 'article' : 'row').filter({ hasText: 'İki sekmeli örnek' })
   await expect(isMobile ? staleRecord.locator('.mobile-amount') : staleRecord.getByRole('cell').nth(3)).toHaveText('20,00 TL')
   await otherPage.close()

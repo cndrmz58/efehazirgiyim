@@ -88,6 +88,7 @@ h1 { font-size: clamp(26px, 3vw, 32px); line-height: 1.25; font-weight: 650; let
 h2 { font-size: 15px; font-weight: 650; }
 .record-count { font-size: 10px; color: #596e60; background: #eef3ef; border-radius: 5px; padding: 3px 7px; white-space: nowrap; }
 .table-hint { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #68796e; }
+.table-heading-actions { display: flex; align-items: center; gap: 16px; margin-left: auto; }
 .table-filters { padding: 12px 24px; display: grid; grid-template-columns: minmax(180px, 1.7fr) repeat(5, minmax(105px, 1fr)) minmax(112px, .65fr); gap: 10px; align-items: flex-end; }
 .filter-toggle { display: none; }
 .filter-fields { display: contents; }
@@ -248,11 +249,12 @@ td { padding: 0; }
 .cashbook-page .page-heading { flex-direction: row; align-items: center; gap: 12px; margin-bottom: 12px; }
 .cashbook-page h1 { font-size: clamp(24px, 2.4vw, 28px); }
 .cashbook-add-button { flex-shrink: 0; }
-.cashbook-dialog { position: fixed; inset: 0; margin: auto; width: min(660px, calc(100vw - 32px)); max-width: none; max-height: min(88dvh, 760px); padding: 0; border: 0; border-radius: 12px; overflow: auto; background: transparent; color: inherit; }
-.cashbook-dialog::backdrop { background: #15241db8; backdrop-filter: blur(2px); }
-.cashbook-dialog .payment-editor { margin: 0; padding: clamp(18px, 3vw, 28px); border: 1px solid #dce5df; box-shadow: 0 24px 70px #10231c40; }
-.cashbook-dialog .payment-form-grid { margin-top: 16px; gap: 14px; }
-.cashbook-dialog .form-actions { margin-top: 18px; }
+.cashbook-header-actions { display: flex; align-items: center; gap: 10px; }
+.editor-dialog { position: fixed; inset: 0; margin: auto; width: min(660px, calc(100vw - 32px)); max-width: none; max-height: min(88dvh, 760px); padding: 0; border: 0; border-radius: 12px; overflow: auto; background: transparent; color: inherit; }
+.editor-dialog::backdrop { background: #15241db8; backdrop-filter: blur(2px); }
+.editor-dialog .payment-editor { margin: 0; padding: clamp(18px, 3vw, 28px); border: 1px solid #dce5df; box-shadow: 0 24px 70px #10231c40; }
+.editor-dialog .payment-form-grid { margin-top: 16px; gap: 14px; }
+.editor-dialog .form-actions { margin-top: 18px; }
 .cashbook .table-card-heading { padding: 14px 20px; }
 .cashbook th { padding-block: 12px; }
 .cashbook table { min-width: 720px; }
@@ -338,6 +340,8 @@ td { padding: 0; }
   .page-heading > div:last-child:has(.button-primary) { width: 100%; }
   .firm-add-button { width: 100%; }
   .cashbook-add-button.button-primary { width: auto; padding-inline: 12px; }
+  .cashbook-header-actions { flex-wrap: wrap; justify-content: flex-end; }
+  .cashbook-page .page-heading > .cashbook-header-actions { width: auto; }
   .button-primary { width: 100%; }
   .table-card-heading { padding: 18px 16px; flex-wrap: wrap; }
   .table-filters { padding: 14px 16px; gap: 12px 10px; }

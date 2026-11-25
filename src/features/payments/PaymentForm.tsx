@@ -44,10 +44,11 @@ function updateFormValues(current: FormValues, name: keyof FormValues, value: st
   return next
 }
 
-export function PaymentForm({ original, organizations, busy, onSave, onCancel }: {
+export function PaymentForm({ original, organizations, busy, error: actionError, onSave, onCancel }: {
   original: Payment | null
   organizations: readonly PaymentOrganization[]
   busy: boolean
+  error?: string | null
   onSave: (input: PaymentInput) => void
   onCancel: () => void
 }) {
@@ -82,6 +83,7 @@ export function PaymentForm({ original, organizations, busy, onSave, onCancel }:
     <section className="settings-card payment-editor" aria-labelledby="payment-form-heading">
       <h2 id="payment-form-heading">{original ? 'Ödemeyi Düzenle' : 'Ödeme Ekle'}</h2>
       <p className="page-description">Kayıt ortak veritabanına kaydedilir ve yetkili ekip üyeleri tarafından görülür. Bu form banka ödemesi gerçekleştirmez.</p>
+      {actionError && <p className="form-error" role="alert">{actionError}</p>}
       <form aria-label="Ödeme formu" aria-busy={busy} noValidate onSubmit={(event) => {
         event.preventDefault()
         const parsed = paymentInputSchema.safeParse(values)

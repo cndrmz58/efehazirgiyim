@@ -1,5 +1,6 @@
 import { ArrowDownUp, Plus, RefreshCw, Search, SlidersHorizontal, Table2 } from 'lucide-react'
 import { useState } from 'react'
+import { EditorDialog } from '../../components/EditorDialog'
 import { currencies, defaultCurrency } from '../../lib/currencies'
 import { tr } from '../../locales/tr'
 import { PaymentForm } from './PaymentForm'
@@ -83,11 +84,13 @@ export function PaymentsPage() {
         </div>
       </header>
 
-      {store.error && <p className="form-error" role="alert">{store.error}</p>}
+      {store.error && (editor === null || (store.status !== 'ready' && store.status !== 'loading')) && <p className="form-error" role="alert">{store.error}</p>}
       {store.feedback && <p className="action-feedback" role="status">{store.feedback}</p>}
 
       {editor !== null && (ready || store.status === 'loading') && (
-        <PaymentForm key={editor === 'new' ? 'new' : editor.id} original={editor === 'new' ? null : editor} organizations={store.organizations} busy={store.busy} onSave={save} onCancel={() => setEditor(null)} />
+        <EditorDialog busy={store.busy} labelledBy="payment-form-heading" onDismiss={() => setEditor(null)}>
+          <PaymentForm key={editor === 'new' ? 'new' : editor.id} original={editor === 'new' ? null : editor} organizations={store.organizations} busy={store.busy} error={store.error} onSave={save} onCancel={() => setEditor(null)} />
+        </EditorDialog>
       )}
 
       {store.status === 'unconfigured' ? (
@@ -104,8 +107,10 @@ export function PaymentsPage() {
             <h2>Ödeme Tablosu</h2>
             <span className="record-count">{visible.length} / {payments.length} kayıt</span>
           </div>
-          <button type="button" className="button-text table-hint" onClick={store.reload}><RefreshCw size={15} aria-hidden="true" /> Yenile</button>
-          <span className="table-hint"><ArrowDownUp size={15} aria-hidden="true" /> Elle giriş</span>
+          <div className="table-heading-actions">
+            <span className="table-hint"><ArrowDownUp size={15} aria-hidden="true" /> Elle giriş</span>
+            <button type="button" className="button-secondary" onClick={store.reload}><RefreshCw size={16} aria-hidden="true" /> Yenile</button>
+          </div>
         </div>
 
         <form className="table-filters" role="search" aria-label="Ödemeleri filtrele" onSubmit={(event) => event.preventDefault()}>

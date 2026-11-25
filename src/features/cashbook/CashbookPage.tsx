@@ -1,5 +1,6 @@
 import { BookOpen, Plus } from 'lucide-react'
-import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
+import { EditorDialog } from '../../components/EditorDialog'
 import { tr } from '../../locales/tr'
 import { formatMoney, toMinorUnits } from '../payments/payment-model'
 import { summarizeCashbookMonth, type CashbookEntry } from './cashbook-model'
@@ -14,45 +15,14 @@ const periods = [
   })),
 ]
 
-function CashbookEditorDialog({ children, busy, onDismiss }: {
-  children: ReactNode
-  busy: boolean
-  onDismiss: () => void
-}) {
-  const dialogRef = useRef<HTMLDialogElement>(null)
-
-  useEffect(() => {
-    const dialog = dialogRef.current
-    if (!dialog) return
-    if (typeof dialog.showModal === 'function') dialog.showModal()
-    else dialog.setAttribute('open', '')
-    return () => {
-      if (typeof dialog.close === 'function' && dialog.open) dialog.close()
-      else dialog.removeAttribute('open')
-    }
-  }, [])
-
-  function dismiss(event: MouseEvent<HTMLDialogElement>) {
-    if (event.target === event.currentTarget && !busy) onDismiss()
-  }
-
-  return <dialog ref={dialogRef} className="cashbook-dialog" aria-labelledby="cashbook-form-heading"
-    onClick={dismiss}
-    onCancel={(event) => {
-      event.preventDefault()
-      if (!busy) onDismiss()
-    }}>
-    {children}
-  </dialog>
-}
-
-export function CashbookPage({ entries = null, canEdit = false, busy = false, editing = false, editor, notice, onEditorCancel, onAdd, onEdit, onDelete }: {
+export function CashbookPage({ entries = null, canEdit = false, busy = false, editing = false, editor, notice, headerAction, onEditorCancel, onAdd, onEdit, onDelete }: {
   entries?: readonly CashbookEntry[] | null
   canEdit?: boolean
   busy?: boolean
   editing?: boolean
   editor?: ReactNode
   notice?: ReactNode
+  headerAction?: ReactNode
   onEditorCancel?: () => void
   onAdd?: (period: string) => void
   onEdit?: (id: string, period: string) => void
@@ -66,13 +36,16 @@ export function CashbookPage({ entries = null, canEdit = false, busy = false, ed
     <div className="cashbook-page">
       <header className="page-heading">
         <h1>{tr.navigation.cashbook}</h1>
-        <button type="button" className="button-primary cashbook-add-button" disabled={!canEdit || busy || editing} aria-describedby="cashbook-backend-note" onClick={() => onAdd?.(selectedPeriod.id)}>
-          <Plus size={17} aria-hidden="true" />
-          {text.add}
-        </button>
+        <div className="cashbook-header-actions">
+          {headerAction}
+          <button type="button" className="button-primary cashbook-add-button" disabled={!canEdit || busy || editing} aria-describedby="cashbook-backend-note" onClick={() => onAdd?.(selectedPeriod.id)}>
+            <Plus size={17} aria-hidden="true" />
+            {text.add}
+          </button>
+        </div>
       </header>
       {notice}
-      {editor && <CashbookEditorDialog busy={busy} onDismiss={() => onEditorCancel?.()}>{editor}</CashbookEditorDialog>}
+      {editor && <EditorDialog busy={busy} labelledBy="cashbook-form-heading" onDismiss={() => onEditorCancel?.()}>{editor}</EditorDialog>}
       <section className="settings-card cashbook-balance" aria-label={text.balanceSummary} aria-live="polite">
         <div>
           <h2>{selectedPeriod.label} — {text.balance}</h2>

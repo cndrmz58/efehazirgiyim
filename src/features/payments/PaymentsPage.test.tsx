@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -141,6 +141,7 @@ describe('Supabase ödeme tablosu', () => {
       : base(table, calls))
 
     await user.click(await screen.findByRole('button', { name: 'Ödeme Ekle' }))
+    expect(screen.getByRole('dialog', { name: 'Ödeme Ekle' })).toContainElement(screen.getByRole('form', { name: 'Ödeme formu' }))
     const form = within(screen.getByRole('form', { name: 'Ödeme formu' }))
     expect(screen.queryByLabelText('Departman')).not.toBeInTheDocument()
     await user.selectOptions(form.getByLabelText('Ödeme şekli'), 'check')
@@ -149,10 +150,25 @@ describe('Supabase ödeme tablosu', () => {
     await user.click(form.getByRole('button', { name: 'Ödemeyi kaydet' }))
 
     expect(await screen.findByRole('status')).toHaveTextContent('Ödeme kaydedildi.')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.getByRole('table')).toHaveTextContent('12,50 TL')
     const insert = requests.find(({ calls }) => isWrite(calls))?.calls.find(([method]) => method === 'insert')
     expect(insert?.[1]).toMatchObject({ organization_id: organizationId, payment_method: 'check', amount: '12.50', remaining_amount: '12.50', due_on: null, notes: null })
     expect(insert?.[1]).not.toHaveProperty('department_id')
+  })
+
+  it('ödeme penceresi iptal edilip yeniden açılabilir', async () => {
+    const user = userEvent.setup()
+    renderPage(workspace('manager', []))
+    await user.click(await screen.findByRole('button', { name: 'Ödeme Ekle' }))
+    const dialog = screen.getByRole('dialog', { name: 'Ödeme Ekle' })
+    await user.type(within(dialog).getByLabelText('Ödeme detayı'), 'Taslak')
+    fireEvent(dialog, new Event('cancel', { cancelable: true }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Ödeme Ekle' }))
+    expect(screen.getByLabelText('Ödeme detayı')).toHaveValue('')
+    await user.click(screen.getByRole('button', { name: 'Vazgeç' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('kalan tutar ara değere düştüğünde kısmi durumu seçer; sıfırda durumu kendiliğinden değiştirmez', async () => {
@@ -211,6 +227,7 @@ describe('Supabase ödeme tablosu', () => {
     await user.click(form.getByRole('button', { name: 'Değişiklikleri kaydet' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('başka bir kullanıcı tarafından değiştirilmiş')
+    expect(screen.getByRole('dialog', { name: 'Ödemeyi Düzenle' })).toContainElement(screen.getByRole('alert'))
     expect(screen.queryByRole('status', { name: /güncellendi/ })).not.toBeInTheDocument()
     expect(await screen.findByLabelText('Açıklama')).toHaveValue('yeni not')
     const update = requests.find(({ calls }) => isWrite(calls))?.calls

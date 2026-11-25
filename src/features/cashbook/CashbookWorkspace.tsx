@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { RefreshCw } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { tr } from '../../locales/tr'
 import type { Failure } from '../payments/payment-repository'
@@ -116,6 +117,7 @@ export function CashbookWorkspace({ client }: { client: SupabaseClient | null })
   }
 
   return <CashbookPage entries={entries} canEdit={Boolean(organization?.canEdit)} busy={busy} editing={editor !== null}
+    headerAction={<button className="button-secondary" type="button" disabled={!client || busy || state.status === 'loading'} onClick={reload}><RefreshCw size={16} aria-hidden="true" />{text.reload}</button>}
     onAdd={(period) => { if (organization?.canEdit) { setFeedback(''); setActionError(null); setEditor({ original: null, period, organizationId: organization.id }) } }}
     onEdit={(id, period) => {
       const original = entries?.find((entry) => entry.id === id)
@@ -129,14 +131,11 @@ export function CashbookWorkspace({ client }: { client: SupabaseClient | null })
       period={editor.period} busy={locked || !organization?.canEdit}
       onSave={(input) => { void save(input) }} onCancel={() => { setEditor(null); setActionError(null) }} />}
     notice={<>
-      <div className="form-actions">
-        {organizations.length > 1 && <label className="form-field">{text.organization}
+      {organizations.length > 1 && <div className="form-actions"><label className="form-field">{text.organization}
           <select value={organization?.id ?? ''} disabled={busy || editor !== null} onChange={(event) => {
             setOrganizationId(event.target.value); setFeedback(''); setActionError(null)
           }}>{organizations.map(({ id, name }) => <option key={id} value={id}>{name}</option>)}</select>
-        </label>}
-        <button className="button-secondary" type="button" disabled={!client || busy || state.status === 'loading'} onClick={reload}>{text.reload}</button>
-      </div>
+        </label></div>}
       {!client ? <p role="status">{text.unconfigured}</p> : state.status === 'loading' && <p role="status">{text.loading}</p>}
       {state.status === 'ready' && !organization && <p role="alert">{text.noAccess}</p>}
       {(state.error || actionError) && <p className="form-error" role="alert">{state.error ?? actionError}</p>}
