@@ -116,7 +116,8 @@ export function CashbookWorkspace({ client }: { client: SupabaseClient | null })
     reload()
   }
 
-  return <CashbookPage entries={entries} canEdit={Boolean(organization?.canEdit)} busy={busy} editing={editor !== null}
+  return <CashbookPage entries={entries} loading={Boolean(client) && state.status === 'loading'}
+    canEdit={Boolean(organization?.canEdit)} busy={busy} editing={editor !== null}
     headerAction={<button className="button-secondary" type="button" disabled={!client || busy || state.status === 'loading'} onClick={reload}><RefreshCw size={16} aria-hidden="true" />{text.reload}</button>}
     onAdd={(period) => { if (organization?.canEdit) { setFeedback(''); setActionError(null); setEditor({ original: null, period, organizationId: organization.id }) } }}
     onEdit={(id, period) => {
@@ -136,7 +137,7 @@ export function CashbookWorkspace({ client }: { client: SupabaseClient | null })
             setOrganizationId(event.target.value); setFeedback(''); setActionError(null)
           }}>{organizations.map(({ id, name }) => <option key={id} value={id}>{name}</option>)}</select>
         </label></div>}
-      {!client ? <p role="status">{text.unconfigured}</p> : state.status === 'loading' && <p role="status">{text.loading}</p>}
+      {!client && <p role="status">{text.unconfigured}</p>}
       {state.status === 'ready' && !organization && <p role="alert">{text.noAccess}</p>}
       {(state.error || actionError) && <p className="form-error" role="alert">{state.error ?? actionError}</p>}
       {feedback && <p role="status">{feedback}</p>}

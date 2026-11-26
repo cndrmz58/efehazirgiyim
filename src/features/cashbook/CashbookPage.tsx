@@ -15,8 +15,9 @@ const periods = [
   })),
 ]
 
-export function CashbookPage({ entries = null, canEdit = false, busy = false, editing = false, editor, notice, headerAction, onEditorCancel, onAdd, onEdit, onDelete }: {
+export function CashbookPage({ entries = null, loading = false, canEdit = false, busy = false, editing = false, editor, notice, headerAction, onEditorCancel, onAdd, onEdit, onDelete }: {
   entries?: readonly CashbookEntry[] | null
+  loading?: boolean
   canEdit?: boolean
   busy?: boolean
   editing?: boolean
@@ -46,6 +47,7 @@ export function CashbookPage({ entries = null, canEdit = false, busy = false, ed
       </header>
       {notice}
       {editor && <EditorDialog busy={busy} labelledBy="cashbook-form-heading" onDismiss={() => onEditorCancel?.()}>{editor}</EditorDialog>}
+      {loading ? <section className="settings-card"><p role="status">{text.loading}</p></section> : <>
       <section className="settings-card cashbook-balance" aria-label={text.balanceSummary} aria-live="polite">
         <div>
           <h2>{selectedPeriod.label} — {text.balance}</h2>
@@ -107,6 +109,7 @@ export function CashbookPage({ entries = null, canEdit = false, busy = false, ed
         </div>
       </section>
       <p className="field-help cashbook-backend-note" id="cashbook-backend-note">{text.backendNote}</p>
+      </>}
       <nav className="cashbook-month-bar" aria-label={text.monthNavigation}>
         {periods.map((period) => (
           <button

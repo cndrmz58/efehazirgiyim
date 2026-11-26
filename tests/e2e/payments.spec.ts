@@ -49,6 +49,7 @@ test('vade tarihi tutardan sonra gösterilir ve gerçekleşen tarihten bağıms�
   await addPayment(page, 'Vadeli örnek', '10', 'TRY', 'invoice', true)
   const list = isMobile ? page.getByLabel('Mobil ödeme listesi') : page.getByRole('table')
   const record = list.getByRole(isMobile ? 'article' : 'row').filter({ hasText: 'Vadeli örnek' })
+  await expect(record.getByText('Muhasebe', { exact: true })).toBeVisible()
   await record.getByRole('button', { name: 'Ödemeyi düzenle: Vadeli örnek' }).click()
   const form = page.getByRole('form', { name: 'Ödeme formu' })
   await form.locator('#payment-dueOn').fill('30.11.2026')
@@ -58,6 +59,7 @@ test('vade tarihi tutardan sonra gösterilir ve gerçekleşen tarihten bağıms�
   await form.getByRole('button', { name: 'Değişiklikleri kaydet' }).click()
   await expect(form).toBeHidden()
   await page.reload()
+  await expect(record.getByText('Muhasebe', { exact: true })).toBeVisible()
   if (!isMobile) {
     const headings = list.getByRole('columnheader')
     await expect(headings.nth(2)).toHaveText('Ödeme Şekli')

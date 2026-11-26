@@ -4,8 +4,8 @@ import { decimalAmountSchema, toMinorUnits } from '../payments/payment-model'
 const amountSchema = z.string().regex(/^(?:0|[1-9]\d{0,11})\.\d{2}$/, 'Tutar, en fazla 12 tam ve tam 2 ondalık basamak içermeli.')
 
 export const cashbookEntryTypes = [
-  'Avans', 'Diğer', 'Fazla Mesai', 'Gelen Para', 'Kasa (Devir)',
-  'Maaş Ödemesi', 'Mutfak Masrafı', 'Yemek', 'Yol Ücreti',
+  'Araç Giderleri', 'Avans', 'Diğer', 'Fazla Mesai', 'Gelen Para', 'Kasa (Devir)',
+  'Maaş Ödemesi', 'Mutfak Masrafı', 'Yemek', 'Yevmiyeci Ödemesi', 'Yol Ücreti',
 ] as const
 export const cashbookEntryTypeSchema = z.enum(cashbookEntryTypes)
 

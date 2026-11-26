@@ -29,8 +29,9 @@ Excel-like payment table rather than automated financial operations:
 | Kalan | Manually entered exact balance in the same currency |
 | Vade Tarihi | Optional, manually entered due date, independent of status |
 | Gerçekleşen Ödeme Tarihi | Actual payment date, not the due date |
-| Açıklama | Manually entered notes |
 | Durum | Dropdown: Ödendi / Ödenmedi / Kısmen Ödendi |
+| İşlem Yapan | Automatically displayed account that created the record; unchanged by edits |
+| Açıklama | Manually entered notes |
 
 The interface supports creating, editing, and deleting payments, searchable
 and combined type/status/currency/year/month filters (year and month use the
@@ -56,9 +57,10 @@ owner-designated accounting account, assigned the separate `cashbook_role` by
 trusted operator SQL, can add, edit, or delete. Organization admins and payment
 managers are read-only unless explicitly assigned that cashbook role.
 There is no automatic integration with payments. Each row has a required date,
-description, and one alphabetically sorted transaction type: Avans, Diğer,
-Fazla Mesai, Gelen Para, Kasa (Devir), Maaş Ödemesi, Mutfak Masrafı, Yemek, or
-Yol Ücreti. The SQL constraint enforces the same list. The compact add/edit
+description, and one alphabetically sorted transaction type: Araç Giderleri,
+Avans, Diğer, Fazla Mesai, Gelen Para, Kasa (Devir), Maaş Ödemesi, Mutfak
+Masrafı, Yemek, Yevmiyeci Ödemesi, or Yol Ücreti. The SQL constraint enforces
+the same list. The compact add/edit
 form opens in a keyboard-accessible dialog instead of expanding across the
 page. Each row has exactly one positive TL direction;
 the other amount must be zero. Enter records within the selected month; cancel
@@ -94,7 +96,11 @@ changes. Failed, invalid or row-limit-truncated responses never produce totals.
    once in Supabase SQL Editor. It records migration `20261124160000` and
    rejects unrecognized existing transaction types without rewriting any
    records. If it reports values, review those existing rows before continuing.
-   Then deploy the frontend using the existing Supabase public environment values.
+   Apply [20261126094000_cashbook_additional_entry_types.sql](./supabase/migrations/20261126094000_cashbook_additional_entry_types.sql)
+   through the normal migration process afterward. The owner reports applying
+   equivalent SQL manually; verify hosted state and migration history first.
+   Do not rerun the older operator after this migration. Then deploy the frontend
+   using the existing Supabase public environment values.
    No additional key or backend service is needed. Verify accounting-account
    CRUD and another active member's read-only access in the deployed app.
 

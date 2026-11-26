@@ -21,10 +21,10 @@ test('muhasebeci kasa ekler, yeniler, düzenler ve denetim uyarısıyla siler', 
   await expect(dialog).toBeHidden()
   await page.getByRole('button', { name: 'Kayıt ekle' }).click()
   await form.getByLabel('Açıklama').fill('Kasaya nakit giriş')
-  await form.getByLabel('İşlem Türü').selectOption('Yemek')
+  await form.getByLabel('İşlem Türü').selectOption('Araç Giderleri')
   await expect(form.getByLabel('İşlem Türü').locator('option')).toHaveText([
-    'İşlem türü seçin', 'Avans', 'Diğer', 'Fazla Mesai', 'Gelen Para', 'Kasa (Devir)',
-    'Maaş Ödemesi', 'Mutfak Masrafı', 'Yemek', 'Yol Ücreti',
+    'İşlem türü seçin', 'Araç Giderleri', 'Avans', 'Diğer', 'Fazla Mesai', 'Gelen Para', 'Kasa (Devir)',
+    'Maaş Ödemesi', 'Mutfak Masrafı', 'Yemek', 'Yevmiyeci Ödemesi', 'Yol Ücreti',
   ])
   await form.getByLabel('Tarih', { exact: true }).fill('24.11.2026')
   await form.getByLabel('Borç (Giren)').fill('0,10')
@@ -34,6 +34,7 @@ test('muhasebeci kasa ekler, yeniler, düzenler ve denetim uyarısıyla siler', 
   await page.reload()
   const row = page.getByRole('row').filter({ has: page.getByRole('cell', { name: 'Kasaya nakit giriş', exact: true }) })
   await expect(row).toBeVisible()
+  await expect(row.getByRole('cell', { name: 'Araç Giderleri', exact: true })).toBeVisible()
   const edit = row.getByRole('button', { name: 'Kaydı düzenle: Kasaya nakit giriş' })
   const remove = row.getByRole('button', { name: 'Kaydı sil: Kasaya nakit giriş' })
   const rowBox = await row.boundingBox()
@@ -50,10 +51,12 @@ test('muhasebeci kasa ekler, yeniler, düzenler ve denetim uyarısıyla siler', 
   expect(editBox!.y).toBe(removeBox!.y)
   expect(editBox!.x).toBeLessThan(removeBox!.x)
   await edit.click()
+  await form.getByLabel('İşlem Türü').selectOption('Yevmiyeci Ödemesi')
   await form.getByLabel('Borç (Giren)').fill('0')
   await form.getByLabel('Alacak (Çıkan)').fill('0,20')
   await form.getByRole('button', { name: 'Kaydet', exact: true }).click()
   await expect(form).toBeHidden()
+  await expect(row.getByRole('cell', { name: 'Yevmiyeci Ödemesi', exact: true })).toBeVisible()
   await expect(summary.getByText('-0,20 TL')).toBeVisible()
   await page.getByRole('button', { name: 'Aralık 2026', exact: true }).click()
   await expect(summary.getByText('0,00 TL')).toHaveCount(3)

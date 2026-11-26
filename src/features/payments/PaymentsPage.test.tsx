@@ -18,7 +18,7 @@ const row = (overrides: Record<string, unknown> = {}) => {
   return ({
   id: '00000000-0000-4000-8000-000000000031', organization_id: organizationId,
   detail: 'Kira', payment_type: 'rent', payment_method: null, amount, remaining_amount: status === 'paid' ? '0.00' : amount, currency: 'TRY', due_on: null, paid_on: null,
-  notes: null, status, revision: 1, created_at: '2026-11-19T10:00:00.123456+00:00', updated_at: '2026-11-19T10:00:00+00:00',
+  notes: null, status, revision: 1, created_at: '2026-11-19T10:00:00.123456+00:00', created_by: userId, updated_at: '2026-11-19T10:00:00+00:00',
   ...overrides,
   })
 }
@@ -27,6 +27,7 @@ function workspace(role: 'manager' | 'viewer' | null, rows: unknown[] = [row()],
   return (table) => ({
     organizations: { data: [{ id: organizationId, name: 'Şirket' }], error: null },
     organization_memberships: { data: [{ organization_id: organizationId, role: 'member', payment_role: role }], error: null },
+    payment_creator_labels: { data: [{ organization_id: organizationId, user_id: userId, display_name: 'Muhasebe' }], error: null, count: 1 },
     payments: { data: rows, error: null, count },
   }[table] ?? { data: null, error: { code: 'unexpected' } })
 }
@@ -69,14 +70,35 @@ describe('Supabase ödeme tablosu', () => {
 
     const table = await screen.findByRole('table')
     expect(within(table).getAllByRole('columnheader').map((header) => header.textContent)).toEqual([
-      'Ödeme Detayı', 'Ödeme Türü', 'Ödeme Şekli', 'Tutar', 'Kalan', 'Vade Tarihi', 'Gerçekleşen Ödeme Tarihi', 'Açıklama', 'Durum',
+      'Ödeme Detayı', 'Ödeme Türü', 'Ödeme Şekli', 'Tutar', 'Kalan', 'Vade Tarihi', 'Gerçekleşen Ödeme Tarihi', 'Durum', 'İşlem Yapan', 'Açıklama',
     ])
     expect(within(table).getAllByText('999.999.999.999,99 TL')).toHaveLength(2)
     expect(within(table).getByText('Belirtilmedi')).toBeVisible()
+    expect(within(table).getByText('Muhasebe')).toBeVisible()
+    expect(within(screen.getByLabelText('Mobil ödeme listesi')).getByText('Muhasebe')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Ödeme Ekle' })).toBeDisabled()
     expect(screen.getByText('Kayıt ekleme yetkiniz yok')).toBeVisible()
     expect(screen.queryByRole('button', { name: /Ödemeyi düzenle/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Ödemeyi sil/ })).not.toBeInTheDocument()
+  })
+
+  it('kimliği veya şirketindeki eşleşmesi olmayan kayıtları bilinmiyor gösterir', async () => {
+    const secondId = '00000000-0000-4000-8000-000000000012'
+    renderPage(workspace('viewer', [
+      row({ detail: 'Eski kayıt', created_by: null }),
+      row({ id: '00000000-0000-4000-8000-000000000032', detail: 'Başka şirket', organization_id: secondId }),
+    ]))
+    const table = await screen.findByRole('table')
+    expect(within(table).getAllByText('Bilinmiyor')).toHaveLength(2)
+  })
+
+  it('hesap adları eksik yüklenirse tabloyu göstermez', async () => {
+    const base = workspace('viewer')
+    renderPage((table, calls) => table === 'payment_creator_labels'
+      ? { data: [], error: null, count: 1 }
+      : base(table, calls))
+    expect(await screen.findByRole('heading', { name: 'Ödemeler yüklenemedi' })).toBeVisible()
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
   })
 
   it('TL varsayılanını, EUR/USD seçimini ve filtrelerin sıfırlanmasını destekler', async () => {

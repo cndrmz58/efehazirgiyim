@@ -29,6 +29,7 @@ export function PaymentsPage() {
   const payments = store.payments
   const years = [...new Set(payments.map(({ dueOn }) => dueOn.slice(0, 4)).filter(Boolean))].sort((left, right) => right.localeCompare(left))
   const organizations = new Map(store.organizations.map((organization) => [organization.id, organization]))
+  const creatorLabels = new Map(store.creatorLabels.map(({ organization_id, user_id, display_name }) => [`${organization_id}:${user_id}`, display_name]))
   const ready = store.status === 'ready'
   const visible = filterPayments(payments, { query, type, status, currency, year, month })
 
@@ -66,6 +67,10 @@ export function PaymentsPage() {
 
   function organizationName(payment: Payment) {
     return store.organizations.length > 1 && <span className="field-help">{organizations.get(payment.organizationId)?.name ?? '—'}</span>
+  }
+
+  function creatorName(payment: Payment) {
+    return payment.createdBy ? creatorLabels.get(`${payment.organizationId}:${payment.createdBy}`) ?? labels.unknownCreator : labels.unknownCreator
   }
 
   return (
@@ -166,7 +171,7 @@ export function PaymentsPage() {
         </form>
 
         <div className={`table-scroll ${visible.length ? 'populated-payment-table' : ''}`} tabIndex={0} role="region" aria-label="Yatay kaydırılabilir ödeme tablosu">
-          <table>
+          <table className="payments-table">
             <caption className="sr-only">Ortak veritabanındaki ödeme kayıtları.</caption>
             <thead>
               <tr>
@@ -177,8 +182,9 @@ export function PaymentsPage() {
                 <th scope="col" className="amount-heading">{labels.remainingAmount}</th>
                 <th scope="col">{labels.dueDate}</th>
                 <th scope="col">{labels.date}</th>
-                <th scope="col">{labels.notes}</th>
                 <th scope="col">{labels.status}</th>
+                <th scope="col">{labels.creator}</th>
+                <th scope="col">{labels.notes}</th>
               </tr>
             </thead>
             <tbody>
@@ -189,14 +195,15 @@ export function PaymentsPage() {
                   <td>{payment.paymentMethod ? labels.paymentMethods[payment.paymentMethod] : 'Belirtilmedi'}</td>
                   <td className="amount-cell">{formatMoney(toMinorUnits(payment.amount), payment.currency)}</td>
                   <td className="amount-cell">{formatMoney(toMinorUnits(payment.remainingAmount), payment.currency)}</td>
-                  <td>{displayDate(payment.dueOn)}</td>
-                  <td>{displayDate(payment.paidOn)}</td>
-                  <td className="notes-cell">{payment.notes || '—'}</td>
+                  <td className="date-cell">{displayDate(payment.dueOn)}</td>
+                  <td className="date-cell">{displayDate(payment.paidOn)}</td>
                   <td><span className={`payment-status status-${payment.status.replace('_', '-')}`}>{labels.statuses[payment.status]}</span></td>
+                  <td>{creatorName(payment)}</td>
+                  <td className="notes-cell">{payment.notes || '—'}</td>
                 </tr>
               ))}
               {visible.length === 0 && <tr>
-                <td colSpan={9}>
+                <td colSpan={10}>
                   <div className="empty-state" aria-live="polite">
                     <span className="empty-icon"><Table2 size={28} aria-hidden="true" /></span>
                     <h3>{filtered || payments.length > 0 ? 'Filtrelere uygun kayıt bulunamadı' : 'Henüz ödeme kaydı yok'}</h3>
@@ -219,6 +226,7 @@ export function PaymentsPage() {
                   <div><dt>{labels.paymentMethod}</dt><dd>{payment.paymentMethod ? labels.paymentMethods[payment.paymentMethod] : 'Belirtilmedi'}</dd></div>
                   <div><dt>{labels.dueDate}</dt><dd>{displayDate(payment.dueOn)}</dd></div>
                   <div><dt>Gerçekleşen ödeme tarihi</dt><dd>{displayDate(payment.paidOn)}</dd></div>
+                  <div><dt>{labels.creator}</dt><dd>{creatorName(payment)}</dd></div>
                   <div><dt>Açıklama</dt><dd>{payment.notes || '—'}</dd></div>
                 </dl>
                 {actions(payment)}
@@ -227,6 +235,7 @@ export function PaymentsPage() {
           </div>
         )}
         <div className="table-footer">
+          <span>İşlem Yapan: kaydı oluşturan hesap</span>
           <span>Varsayılan para birimi: TL · EUR ve USD seçilebilir</span>
           <span>Otomatik kur dönüşümü yapılmaz</span>
         </div>

@@ -188,6 +188,14 @@ do $$ begin
 end $$;
 reset role;
 
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000001', true);
+insert into public.cashbook_entries (organization_id, entry_on, description, entry_type, incoming, outgoing)
+values
+  ('00000000-0000-4000-8000-000000000011', '2026-11-24', 'Vehicle', 'Araç Giderleri', 0, 1),
+  ('00000000-0000-4000-8000-000000000011', '2026-11-24', 'Daily worker', 'Yevmiyeci Ödemesi', 0, 1);
+reset role;
+
 -- Revocation takes effect on the next statement, independently of a cached browser role.
 update public.organization_memberships set active = false where user_id = '00000000-0000-4000-8000-000000000001';
 set local role authenticated;

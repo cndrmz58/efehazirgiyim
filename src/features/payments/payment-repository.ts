@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { paymentSchema, type Payment, type PaymentInput } from './payment-model'
 
 // Amounts are read as text so exact decimal values never pass through a JavaScript number.
-const columns = 'id, organization_id, detail, payment_type, payment_method, amount::text, remaining_amount::text, currency, due_on, paid_on, notes, status, revision, created_at, updated_at'
+const columns = 'id, organization_id, detail, payment_type, payment_method, amount::text, remaining_amount::text, currency, due_on, paid_on, notes, status, revision, created_at, created_by, updated_at'
 
 const rowSchema = z.object({
   id: z.string(),
@@ -20,10 +20,12 @@ const rowSchema = z.object({
   status: z.string(),
   revision: z.number(),
   created_at: z.string(),
+  created_by: z.uuid().nullable(),
   updated_at: z.string(),
 })
 
 const organizationRowSchema = z.object({ id: z.uuid(), name: z.string() })
+const creatorLabelSchema = z.object({ organization_id: z.uuid(), user_id: z.uuid(), display_name: z.string().trim().min(1).max(80) })
 const organizationRoleSchema = z.object({
   organization_id: z.uuid(),
   role: z.enum(['admin', 'member']),
@@ -31,7 +33,8 @@ const organizationRoleSchema = z.object({
 })
 
 export type PaymentOrganization = { id: string; name: string; canEdit: boolean }
-export type PaymentWorkspace = { userId: string; organizations: PaymentOrganization[]; payments: Payment[] }
+export type PaymentCreatorLabel = z.infer<typeof creatorLabelSchema>
+export type PaymentWorkspace = { userId: string; organizations: PaymentOrganization[]; payments: Payment[]; creatorLabels: PaymentCreatorLabel[] }
 export type Failure = 'conflict' | 'forbidden' | 'invalid' | 'incomplete' | 'unavailable'
 export type Result<T> = { ok: true; value: T } | { ok: false; reason: Failure }
 
@@ -62,6 +65,7 @@ function toPayment(row: unknown): Payment | null {
     status: value.status,
     revision: value.revision,
     createdAt: value.created_at,
+    createdBy: value.created_by,
     updatedAt: value.updated_at,
   })
   return payment.success ? payment.data : null
@@ -93,22 +97,24 @@ export async function loadPaymentWorkspace(client: SupabaseClient): Promise<Resu
     if (sessionError || !session) return failure('forbidden')
     const userId = session.user.id
 
-    const [organizations, organizationRoles, payments] = await Promise.all([
+    const [organizations, organizationRoles, payments, creatorLabels] = await Promise.all([
       client.from('organizations').select('id, name').order('name'),
       client.from('organization_memberships').select('organization_id, role, payment_role').eq('user_id', userId).eq('active', true),
       client.from('payments').select(columns, { count: 'exact' }).order('created_at', { ascending: false }),
+      client.from('payment_creator_labels').select('organization_id, user_id, display_name', { count: 'exact' }),
     ])
-    const error = organizations.error ?? organizationRoles.error ?? payments.error
+    const error = organizations.error ?? organizationRoles.error ?? payments.error ?? creatorLabels.error
     if (error) return failure(classify(error))
 
     const parsedOrganizations = z.array(organizationRowSchema).safeParse(organizations.data)
     const parsedOrganizationRoles = z.array(organizationRoleSchema).safeParse(organizationRoles.data)
     const parsedPayments = toPayments(payments.data ?? [])
-    if (!parsedOrganizations.success || !parsedOrganizationRoles.success || !parsedPayments) {
+    const parsedLabels = z.array(creatorLabelSchema).safeParse(creatorLabels.data)
+    if (!parsedOrganizations.success || !parsedOrganizationRoles.success || !parsedPayments || !parsedLabels.success) {
       return failure('unavailable')
     }
     // Never show partial totals if the API row limit truncated the result.
-    if (payments.count !== parsedPayments.length) return failure('incomplete')
+    if (payments.count !== parsedPayments.length || creatorLabels.count !== parsedLabels.data.length) return failure('incomplete')
 
     const roles = new Map(parsedOrganizationRoles.data.map((membership) => [membership.organization_id, membership]))
     return {
@@ -116,6 +122,7 @@ export async function loadPaymentWorkspace(client: SupabaseClient): Promise<Resu
       value: {
         userId,
         payments: parsedPayments,
+        creatorLabels: parsedLabels.data,
         organizations: parsedOrganizations.data.flatMap(({ id, name }) => {
           const membership = roles.get(id)
           if (!membership || (membership.role !== 'admin' && !membership.payment_role)) return []

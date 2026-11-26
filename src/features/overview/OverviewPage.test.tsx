@@ -23,6 +23,7 @@ function payment(id: string, detail: string, dueOn: string) {
     notes: '',
     status: 'unpaid',
     createdAt: '2026-11-18T12:00:00Z',
+    createdBy: null,
     updatedAt: '2026-11-18T12:00:00Z',
     revision: 1,
   })
@@ -37,6 +38,7 @@ describe('genel bakış vade listeleri', () => {
         payment('00000000-0000-4000-8000-000000000032', 'Bugünkü fatura', localIsoDate()),
       ],
       organizations: [{ id: organizationId, name: 'EFE Tekstil', canEdit: false }],
+      creatorLabels: [],
       canEdit: false,
       busy: false,
       error: null,

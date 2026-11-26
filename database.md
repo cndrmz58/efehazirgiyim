@@ -28,6 +28,9 @@ already-applied migration. SQL regression tests live in
   adds an exact remaining balance and the `partially_paid` status. Existing
   paid records are backfilled to zero remaining; unpaid records are backfilled
   to their full amount.
+- [Payment creator labels](./supabase/migrations/20261126100000_payment_creator_labels.sql):
+  the migration and operator assignments must be applied before deploying the
+  frontend. Hosted activation is not verified.
 - Payment method is stored as `check`, `cash`, or `bank`. Historical rows stay
   null because their method cannot be inferred; new rows must specify a method.
 - [Manual cashbook](./supabase/migrations/20261124140000_cashbook.sql):
@@ -37,6 +40,10 @@ already-applied migration. SQL regression tests live in
 - [Cashbook transaction types](./supabase/migrations/20261124160000_cashbook_entry_types.sql):
   restricts transaction types to the owner-approved, alphabetically ordered
   choices. The SQL Editor companion refuses to reclassify any existing records.
+- [Additional cashbook transaction types](./supabase/migrations/20261126094000_cashbook_additional_entry_types.sql):
+  adds `Araç Giderleri` and `Yevmiyeci Ödemesi` without changing existing rows.
+  The owner reports applying the equivalent SQL manually; hosted state and
+  migration history have not been independently verified.
 
 ## Approved manual cashbook (`public.cashbook_entries`)
 
@@ -47,9 +54,10 @@ TL `incoming` / `outgoing` decimal values. Exactly one direction must be positiv
 the other must be zero. Both must be below `1000000000000` with at most two
 fractional digits. Unconstrained `numeric` plus checks rejects excess precision
 instead of rounding it. API reads cast money to text; the UI uses `bigint`.
-Transaction types (Turkish alphabetical order) are `Avans`, `Diğer`, `Fazla
-Mesai`, `Gelen Para`, `Kasa (Devir)`, `Maaş Ödemesi`, `Mutfak Masrafı`, `Yemek`,
-and `Yol Ücreti`. Both the app and PostgreSQL enforce this closed set. Before
+Transaction types (Turkish alphabetical order) are `Araç Giderleri`, `Avans`,
+`Diğer`, `Fazla Mesai`, `Gelen Para`, `Kasa (Devir)`, `Maaş Ödemesi`,
+`Mutfak Masrafı`, `Yemek`, `Yevmiyeci Ödemesi`, and `Yol Ücreti`. Both the
+app and PostgreSQL enforce this closed set. Before
 applying the type constraint, review existing rows; the migration fails safely
 and lists any unrecognized values instead of changing financial records.
 The selected month's balance is incoming minus outgoing, with no carry-forward.
@@ -81,6 +89,13 @@ SQL Editor before deploying the matching frontend. It replaces the initial
 free-text check with the approved choices and records migration `20261124160000`.
 It first lists any existing unapproved types and aborts without changing rows;
 review those records rather than silently reclassifying them.
+Then apply `20261126094000_cashbook_additional_entry_types.sql` through the
+normal migration process before deploying the matching frontend. This migration
+can also be applied when the equivalent constraint was installed manually; it
+does not modify records. Verify the target and migration history first. Do not
+rerun the older type operator after applying the additional types: it only knows
+the previous list and may reject existing new-type records or remove the new
+choices when none exist.
 For SQL Editor deployment, wrap both files in one transaction and record version
 `20261124140000` in `supabase_migrations.schema_migrations`, following the manual
 deployment procedure below. Do not run regression-test fixtures in production.
@@ -134,6 +149,35 @@ must still be verified after deployment.
   time, and full old/new row JSON. A `security definer` trigger writes it;
   API roles have no write privileges. Only active organization admins can read it.
   Deleting a payment removes it from the table, but the audit history keeps it.
+- The **İşlem Yapan** column identifies the account that created the record,
+  not its last editor or necessarily the person who performed the real-world
+  payment. `created_by` remains server-stamped and unchanged on edits. A null
+  actor or an actor without an assigned label is displayed as `Bilinmiyor`;
+  historical records are not guessed or rewritten.
+- `public.payment_creator_labels` maps an organization membership to an
+  operator-assigned display label. Payment readers may read only their
+  accessible organizations' labels; API roles cannot modify them. The
+  application never derives another user's label from email or client input.
+  Labels are current account labels rather than historical snapshots.
+
+Deployment: apply `20261126100000_payment_creator_labels.sql` before the
+matching frontend. Then, as database owner, verify the target organization and
+the three Auth user IDs and set the labels for their existing memberships using
+the SQL Editor, replacing the placeholders below. Do not send credentials or
+run test fixtures in production. Review each mapping before execution.
+
+```sql
+insert into public.payment_creator_labels (organization_id, user_id, display_name)
+values
+  ('<organization-uuid>', '<muhasebe-user-uuid>', 'Muhasebe'),
+  ('<organization-uuid>', '<erkan-user-uuid>', 'Erkan'),
+  ('<organization-uuid>', '<kesim-user-uuid>', 'Kesim')
+on conflict (organization_id, user_id) do update set display_name = excluded.display_name;
+```
+
+The foreign key rejects missing memberships. Verify the three assignments and
+the actual payment flow after deployment; labels are not populated by the
+migration and no existing payment history is changed.
 
 Use a database owner only for migrations and disposable SQL tests; no product
 workflow should use owner credentials. Collections, settlements, currency

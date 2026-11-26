@@ -73,6 +73,8 @@ export const tr = {
     remainingAmount: 'Kalan',
     dueDate: 'Vade Tarihi',
     date: 'Gerçekleşen Ödeme Tarihi',
+    creator: 'İşlem Yapan',
+    unknownCreator: 'Bilinmiyor',
     notes: 'Açıklama',
     status: 'Durum',
     types: {

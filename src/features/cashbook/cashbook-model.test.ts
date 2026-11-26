@@ -31,9 +31,17 @@ describe('aylık kasa bakiyesi', () => {
   })
   it('işlem türlerini Türkçe alfabetik sırada sunar', () => {
     expect(cashbookEntryTypes).toEqual([
-      'Avans', 'Diğer', 'Fazla Mesai', 'Gelen Para', 'Kasa (Devir)',
-      'Maaş Ödemesi', 'Mutfak Masrafı', 'Yemek', 'Yol Ücreti',
+      'Araç Giderleri', 'Avans', 'Diğer', 'Fazla Mesai', 'Gelen Para', 'Kasa (Devir)',
+      'Maaş Ödemesi', 'Mutfak Masrafı', 'Yemek', 'Yevmiyeci Ödemesi', 'Yol Ücreti',
     ])
+  })
+  it.each(['Araç Giderleri', 'Yevmiyeci Ödemesi'])('yeni işlem türünü kabul eder: %s', (type) => {
+    const input = {
+      organizationId: '00000000-0000-4000-8000-000000000011', date: '2026-11-24',
+      description: 'Kasa', type, incoming: '0', outgoing: '10',
+    }
+    expect(cashbookInputSchema.parse(input).type).toBe(type)
+    expect(summarizeCashbookMonth([{ ...entry('yeni', '2026-11-24', '0.00', '10.00'), type: cashbookInputSchema.parse(input).type }], '2026-11').outgoing).toBe(1000n)
   })
   it.each([
     ['2026-11', 10030n, 8003n, 2027n, ['kasim-ilk', 'kasim-son']],

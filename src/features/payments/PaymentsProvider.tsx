@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { paymentInputSchema, type Payment, type PaymentInput } from './payment-model'
 import {
   createPayment, deletePayment as removePayment, loadPaymentWorkspace, updatePayment,
-  type PaymentOrganization, type Failure,
+  type PaymentOrganization, type PaymentCreatorLabel, type Failure,
 } from './payment-repository'
 import { PaymentContext, type PaymentStoreStatus } from './payment-store'
 
@@ -11,7 +11,7 @@ const messages: Record<Failure, string> = {
   conflict: 'Kayıt başka bir kullanıcı tarafından değiştirilmiş veya silinmiş ya da bu işlem için yetkiniz yok. Değişiklik uygulanmadı; liste yenilendi. Açık düzenlemeyi iptal edip güncel kaydı yeniden açın.',
   forbidden: 'Bu işlem için yetkiniz yok. Yetki gerekiyorsa yöneticinize başvurun.',
   invalid: 'Kayıt veritabanı kurallarına uymuyor. Alanları kontrol edip yeniden deneyin.',
-  incomplete: 'Tüm ödeme kayıtları yüklenemedi. Eksik tablo veya özet gösterilmiyor; lütfen yöneticinize bildirin.',
+  incomplete: 'Tüm ödeme kayıtları yüklenemedi veya işlem yapan bilgileri eksik. Eksik tablo veya özet gösterilmiyor; lütfen yöneticinize bildirin.',
   unavailable: 'Veritabanına ulaşılamadı. Bağlantınızı kontrol edip yeniden deneyin.',
 }
 
@@ -20,10 +20,11 @@ type State = {
   userId: string | null
   payments: Payment[]
   organizations: PaymentOrganization[]
+  creatorLabels: PaymentCreatorLabel[]
   error: string | null
 }
 
-const emptyState = (status: PaymentStoreStatus): State => ({ status, userId: null, payments: [], organizations: [], error: null })
+const emptyState = (status: PaymentStoreStatus): State => ({ status, userId: null, payments: [], organizations: [], creatorLabels: [], error: null })
 
 export function PaymentsProvider({ client, children }: { client: SupabaseClient | null; children: ReactNode }) {
   const [state, setState] = useState<State>(() => emptyState(client ? 'loading' : 'unconfigured'))
@@ -120,6 +121,7 @@ export function PaymentsProvider({ client, children }: { client: SupabaseClient 
       status: state.status,
       payments: state.payments,
       organizations: state.organizations,
+      creatorLabels: state.creatorLabels,
       canEdit: state.organizations.some(({ canEdit }) => canEdit),
       busy,
       error: state.error ?? actionError,

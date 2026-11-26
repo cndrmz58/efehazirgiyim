@@ -13,10 +13,13 @@ const row = {
   created_at: '2026-11-24T10:00:00+00:00', updated_at: '2026-11-24T10:00:00+00:00',
 }
 
-function setup(options: { accountant?: boolean; count?: number; write?: 'conflict' | 'forbidden'; invalid?: boolean; noMembership?: boolean } = {}) {
+function setup(options: { accountant?: boolean; count?: number; write?: 'conflict' | 'forbidden'; invalid?: boolean; noMembership?: boolean; pending?: boolean } = {}) {
   const requests: { table: string; method: string; url: URL; body: unknown }[] = []
+  let releaseLoad = () => {}
+  const loadGate = options.pending ? new Promise<void>((resolve) => { releaseLoad = resolve }) : Promise.resolve()
   let rows = [options.invalid ? { ...row, incoming: '0.001' } : row]
   const fetcher: typeof fetch = async (input, init) => {
+    await loadGate
     const url = new URL(input instanceof Request ? input.url : input)
     const method = init?.method ?? 'GET'
     const table = url.pathname.split('/').pop() ?? ''
@@ -51,12 +54,22 @@ function setup(options: { accountant?: boolean; count?: number; write?: 'conflic
     user: { id: userId, app_metadata: {}, user_metadata: {}, aud: 'authenticated', created_at: '2026-11-24T00:00:00Z' },
   } }, error: null })
   render(<CashbookWorkspace client={client} />)
-  return { requests }
+  return { requests, releaseLoad }
 }
 
 afterEach(() => vi.restoreAllMocks())
 
 describe('Supabase kasa bağlantısı', () => {
+  it('yükleme sürerken boş tablo yerine açık bir yükleniyor durumu gösterir', async () => {
+    const { releaseLoad } = setup({ pending: true })
+
+    expect(screen.getByRole('status')).toHaveTextContent('Kasa kayıtları yükleniyor')
+    expect(screen.queryByRole('table', { name: 'Kasa hareketleri' })).not.toBeInTheDocument()
+
+    releaseLoad()
+    expect(await screen.findByText('Kasa girişi')).toBeVisible()
+  })
+
   it('aktif üyeye tam ve kesin bakiye gösterir; rol atanmadan yazma açmaz', async () => {
     const { requests } = setup()
     expect(await screen.findByText('Kasa girişi')).toBeVisible()

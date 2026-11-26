@@ -61,6 +61,7 @@ export const paymentInputSchema = paymentFields.superRefine(checkPayment)
 export const paymentSchema = paymentFields.extend({
   paymentMethod: z.enum(['check', 'cash', 'bank']).nullable(),
   id: z.uuid(),
+  createdBy: z.uuid().nullable(),
   createdAt: z.iso.datetime({ offset: true }),
   updatedAt: z.iso.datetime({ offset: true }),
   revision: z.number().int().positive(),

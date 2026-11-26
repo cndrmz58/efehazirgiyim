@@ -10,7 +10,7 @@ function payment(overrides: Record<string, unknown> = {}) {
     ...draft,
     amount,
     remainingAmount: overrides.remainingAmount ?? (status === 'paid' ? '0.00' : amount),
-    id: crypto.randomUUID(), createdAt: '2026-11-18T12:00:00Z', updatedAt: '2026-11-18T12:00:00Z', revision: 1, ...overrides,
+    id: crypto.randomUUID(), createdBy: null, createdAt: '2026-11-18T12:00:00Z', updatedAt: '2026-11-18T12:00:00Z', revision: 1, ...overrides,
   })
 }
 
@@ -32,7 +32,7 @@ describe('ödeme doğrulaması ve özetleri', () => {
     expect(paymentInputSchema.safeParse({ ...draft, paymentMethod: '' }).success).toBe(false)
     expect(paymentInputSchema.safeParse({ ...draft, paymentMethod: 'transfer' }).success).toBe(false)
     expect(paymentSchema.safeParse({
-      ...draft, paymentMethod: null, id: crypto.randomUUID(), createdAt: '2026-11-18T12:00:00Z',
+      ...draft, paymentMethod: null, id: crypto.randomUUID(), createdBy: null, createdAt: '2026-11-18T12:00:00Z',
       updatedAt: '2026-11-18T12:00:00Z', revision: 1,
     }).success).toBe(true)
   })

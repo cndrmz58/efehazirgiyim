@@ -158,6 +158,8 @@ td { padding: 0; }
 .payment-row td { padding: 18px 20px; border-bottom: 1px solid #e7ece8; font-size: 12px; vertical-align: top; overflow-wrap: anywhere; }
 .payment-row td:first-child { padding-left: 24px; min-width: 170px; }
 .payment-row strong { font-weight: 600; }
+.payments-table { min-width: 1250px; }
+.payments-table .date-cell { white-space: nowrap; }
 .amount-cell { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .notes-cell { min-width: 130px; max-width: 260px; white-space: pre-wrap; }
 .row-actions { display: flex; gap: 16px; }

@@ -50,6 +50,13 @@ export async function mockSupabase(context: BrowserContext, options: { cashbookR
     if (method === 'GET' && table === 'organization_memberships') {
       return route.fulfill({ json: [{ organization_id: organizationId, role: 'admin', payment_role: null, cashbook_role: options.cashbookRole ?? null }] })
     }
+    if (method === 'GET' && table === 'payment_creator_labels') {
+      return route.fulfill({ json: [{ organization_id: organizationId, user_id: userId, display_name: 'Muhasebe' }], headers: {
+        'access-control-allow-origin': '*',
+        'access-control-expose-headers': 'content-range',
+        'content-range': '0-0/1',
+      } })
+    }
     if (table !== 'payments' && table !== 'cashbook_entries') return route.fulfill({ status: 404, json: {} })
     const rows = table === 'payments' ? paymentRows : cashbookRows
 
@@ -67,7 +74,7 @@ export async function mockSupabase(context: BrowserContext, options: { cashbookR
       const row: Row = {
         ...request.postDataJSON() as Record<string, unknown>,
         id: `00000000-0000-4000-8000-${String(sequence).padStart(12, '0')}`,
-        revision: 1, created_at: now, updated_at: now,
+        revision: 1, created_at: now, created_by: userId, updated_at: now,
       }
       rows.unshift(row)
       return route.fulfill({ status: 201, json: table === 'payments' ? row : [row] })
