@@ -207,7 +207,7 @@ export function PaymentsPage() {
             </thead>
             <tbody>
               {visible.map((payment) => (
-                <tr key={payment.id} className="payment-row">
+                <tr key={payment.id} className={`payment-row${payment.status === 'unpaid' ? ' payment-row-unpaid' : ''}`}>
                   <td><strong>{payment.detail}</strong>{organizationName(payment)}{actions(payment)}</td>
                   <td>{labels.types[payment.type]}</td>
                   <td>{payment.paymentMethod ? labels.paymentMethods[payment.paymentMethod] : 'Belirtilmedi'}</td>

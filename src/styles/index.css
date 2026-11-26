@@ -170,6 +170,7 @@ td { padding: 0; }
 .payments-table th { padding: 14px 8px; white-space: normal; overflow-wrap: anywhere; }
 .payments-table th:first-child, .payments-table .payment-row td:first-child { padding-left: 12px; min-width: 0; }
 .payments-table .payment-row td { padding: 18px 8px; }
+.payments-table .payment-row-unpaid { background: #fff5f4; }
 .payments-table .amount-cell { white-space: normal; overflow-wrap: anywhere; }
 .payments-table .date-cell { white-space: nowrap; }
 .payments-table .notes-cell { min-width: 0; }

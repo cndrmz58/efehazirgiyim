@@ -45,6 +45,25 @@ test('ödeme penceresi ve sağdaki yenile düğmesi çalışır', async ({ page 
   await expect(dialog).toBeHidden()
 })
 
+test('yalnız ödenmeyen satır hafif kırmızı gösterilir ve durum değişince güncellenir', async ({ page }) => {
+  await addPayment(page, 'Ödenmemiş fatura', '100', 'TRY', 'invoice')
+  await addPayment(page, 'Ödenmiş fatura', '100', 'TRY', 'invoice', true)
+  const rows = page.getByRole('table').getByRole('row')
+  const unpaid = rows.filter({ hasText: 'Ödenmemiş fatura' })
+  const paid = rows.filter({ hasText: 'Ödenmiş fatura' })
+  await expect(unpaid).toHaveCSS('background-color', 'rgb(255, 245, 244)')
+  await expect(paid).not.toHaveCSS('background-color', 'rgb(255, 245, 244)')
+  await expect(unpaid.getByText('Ödenmedi', { exact: true })).toBeVisible()
+
+  await unpaid.getByRole('button', { name: 'Ödemeyi düzenle: Ödenmemiş fatura' }).click()
+  const form = page.getByRole('form', { name: 'Ödeme formu' })
+  await form.locator('#payment-remainingAmount').fill('50')
+  await form.getByRole('button', { name: 'Değişiklikleri kaydet' }).click()
+  await expect(form).toBeHidden()
+  await expect(unpaid.getByText('Kısmen Ödendi', { exact: true })).toBeVisible()
+  await expect(unpaid).not.toHaveCSS('background-color', 'rgb(255, 245, 244)')
+})
+
 test('mobil ödeme tablosu kompakt satırlar ve yatay kaydırma sunar', async ({ page, isMobile }) => {
   test.skip(!isMobile, 'Mobil tablo düzeni')
   await addPayment(page, 'Elektrik faturası', '100', 'TRY', 'invoice', false, '30.11.2026')
