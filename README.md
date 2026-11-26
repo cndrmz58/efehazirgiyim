@@ -35,13 +35,15 @@ Excel-like payment table rather than automated financial operations:
 
 The interface supports creating, editing, and deleting payments, searchable
 and combined type/status/currency/year/month filters (year and month use the
-due date), desktop tables, mobile record cards, and a data-driven General
+due date), a payment table, and a data-driven General
 Overview (`/overview`). The **Firmalar** (`/firms`) directory is an explicitly
 approved UI-only prototype: it contains no sample companies, does not persist
 firm data, and keeps adding firms unavailable until its backend is approved and
 implemented. TL is the default currency
 for both new records and the initial table filter. New or edited records become
 visible by resetting other filters and selecting that record's currency.
+On smaller screens, the payment table uses compact rows and horizontal scrolling
+to reach all fields and the edit/delete actions.
 
 The **Kasa Defteri** (`/cashbook`) is connected to Supabase through the existing
 authenticated client, with Tarih, Açıklama, İşlem Türü, Borç (Giren), and Alacak

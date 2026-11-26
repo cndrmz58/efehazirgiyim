@@ -1,4 +1,4 @@
-import { ArrowDownUp, Plus, RefreshCw, Search, SlidersHorizontal, Table2 } from 'lucide-react'
+import { ArrowDownUp, Pencil, Plus, RefreshCw, Search, SlidersHorizontal, Table2, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { EditorDialog } from '../../components/EditorDialog'
 import { currencies, defaultCurrency } from '../../lib/currencies'
@@ -56,17 +56,17 @@ export function PaymentsPage() {
     }
   }
 
-  function actions(payment: Payment) {
+  function actions(payment: Payment, compact = false) {
     const organization = organizations.get(payment.organizationId)
     if (!organization?.canEdit) return null
     return (
-      <div className="row-actions">
-        <button type="button" className="button-text" disabled={store.busy} aria-label={`Ödemeyi düzenle: ${payment.detail}`} onClick={() => setEditor(payment)}>Düzenle</button>
-        <button type="button" className="button-text danger-text" disabled={store.busy} aria-label={`Ödemeyi sil: ${payment.detail}`} onClick={async () => {
+      <div className={compact ? 'cashbook-row-actions' : 'row-actions payment-desktop-actions'}>
+        <button type="button" className={compact ? 'cashbook-row-action' : 'button-text'} disabled={store.busy} aria-label={`Ödemeyi düzenle: ${payment.detail}`} title={compact ? 'Düzenle' : undefined} onClick={() => setEditor(payment)}>{compact ? <Pencil size={16} aria-hidden="true" /> : 'Düzenle'}</button>
+        <button type="button" className={compact ? 'cashbook-row-action cashbook-row-delete' : 'button-text danger-text'} disabled={store.busy} aria-label={`Ödemeyi sil: ${payment.detail}`} title={compact ? 'Sil' : undefined} onClick={async () => {
           if (window.confirm(`“${payment.detail}” ödemesi silinsin mi? Silme işlemi denetim geçmişine kaydedilir.`) && await store.deletePayment(payment)) {
             if (editor !== 'new' && editor?.id === payment.id) setEditor(null)
           }
-        }}>Sil</button>
+        }}>{compact ? <Trash2 size={16} aria-hidden="true" /> : 'Sil'}</button>
       </div>
     )
   }
@@ -180,6 +180,7 @@ export function PaymentsPage() {
           </div>
         </form>
 
+        {visible.length > 0 && <p className="payment-scroll-hint">Tüm sütunları ve işlemleri görmek için tabloyu yatay kaydırın.</p>}
         <div className={`table-scroll ${visible.length ? 'populated-payment-table' : ''}`} tabIndex={0} role="region" aria-label="Ödeme tablosu">
           <table className="payments-table">
             <caption className="sr-only">Ortak veritabanındaki ödeme kayıtları.</caption>
@@ -187,7 +188,7 @@ export function PaymentsPage() {
               <col className="payment-col-detail" /><col className="payment-col-kind" /><col className="payment-col-kind" />
               <col className="payment-col-amount" /><col className="payment-col-amount" />
               <col className="payment-col-due" /><col className="payment-col-paid" /><col className="payment-col-status" />
-              <col className="payment-col-creator" /><col className="payment-col-notes" />
+              <col className="payment-col-creator" /><col className="payment-col-notes" /><col className="payment-col-actions" />
             </colgroup>
             <thead>
               <tr>
@@ -201,6 +202,7 @@ export function PaymentsPage() {
                 <th scope="col">{labels.status}</th>
                 <th scope="col">{labels.creator}</th>
                 <th scope="col">{labels.notes}</th>
+                <th scope="col" className="payment-compact-actions">İşlemler</th>
               </tr>
             </thead>
             <tbody>
@@ -216,10 +218,11 @@ export function PaymentsPage() {
                   <td><span className={`payment-status status-${payment.status.replace('_', '-')}`}>{labels.statuses[payment.status]}</span></td>
                   <td>{creatorName(payment)}</td>
                   <td className="notes-cell">{payment.notes || '—'}</td>
+                  <td className="payment-compact-actions">{actions(payment, true)}</td>
                 </tr>
               ))}
               {visible.length === 0 && <tr>
-                <td colSpan={10}>
+                <td colSpan={11}>
                   <div className="empty-state" aria-live="polite">
                     <span className="empty-icon"><Table2 size={28} aria-hidden="true" /></span>
                     <h3>{filtered || payments.length > 0 ? 'Filtrelere uygun kayıt bulunamadı' : 'Henüz ödeme kaydı yok'}</h3>
@@ -230,26 +233,6 @@ export function PaymentsPage() {
             </tbody>
           </table>
         </div>
-        {visible.length > 0 && (
-          <div className="payment-mobile-list" aria-label="Mobil ödeme listesi">
-            {visible.map((payment) => (
-              <article className="payment-mobile-card" key={payment.id}>
-                <div className="mobile-card-heading"><h3>{payment.detail}{organizationName(payment)}</h3><span className={`payment-status status-${payment.status.replace('_', '-')}`}>{labels.statuses[payment.status]}</span></div>
-                <p className="mobile-amount">{formatMoney(toMinorUnits(payment.amount), payment.currency)}</p>
-                <dl>
-                  <div><dt>{labels.remainingAmount}</dt><dd>{formatMoney(toMinorUnits(payment.remainingAmount), payment.currency)}</dd></div>
-                  <div><dt>Ödeme türü</dt><dd>{labels.types[payment.type]}</dd></div>
-                  <div><dt>{labels.paymentMethod}</dt><dd>{payment.paymentMethod ? labels.paymentMethods[payment.paymentMethod] : 'Belirtilmedi'}</dd></div>
-                  <div><dt>{labels.dueDate}</dt><dd>{displayDate(payment.dueOn)}</dd></div>
-                  <div><dt>Gerçekleşen ödeme tarihi</dt><dd>{displayDate(payment.paidOn)}</dd></div>
-                  <div><dt>{labels.creator}</dt><dd>{creatorName(payment)}</dd></div>
-                  <div><dt>Açıklama</dt><dd>{payment.notes || '—'}</dd></div>
-                </dl>
-                {actions(payment)}
-              </article>
-            ))}
-          </div>
-        )}
         <div className="table-footer">
           <span>İşlem Yapan: kaydı oluşturan hesap · * Eski kayıt için atanmış gösterim</span>
           <span>Varsayılan para birimi: TL · EUR ve USD seçilebilir</span>

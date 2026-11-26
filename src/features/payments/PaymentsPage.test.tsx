@@ -71,12 +71,11 @@ describe('Supabase ödeme tablosu', () => {
 
     const table = await screen.findByRole('table')
     expect(within(table).getAllByRole('columnheader').map((header) => header.textContent)).toEqual([
-      'Ödeme Detayı', 'Ödeme Türü', 'Ödeme Şekli', 'Tutar', 'Kalan', 'Vade Tarihi', 'Gerçekleşen Ödeme Tarihi', 'Durum', 'İşlem Yapan', 'Açıklama',
+      'Ödeme Detayı', 'Ödeme Türü', 'Ödeme Şekli', 'Tutar', 'Kalan', 'Vade Tarihi', 'Gerçekleşen Ödeme Tarihi', 'Durum', 'İşlem Yapan', 'Açıklama', 'İşlemler',
     ])
     expect(within(table).getAllByText('999.999.999.999,99 TL')).toHaveLength(2)
     expect(within(table).getByText('Belirtilmedi')).toBeVisible()
     expect(within(table).getByText('Muhasebe')).toBeVisible()
-    expect(within(screen.getByLabelText('Mobil ödeme listesi')).getByText('Muhasebe')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Ödeme Ekle' })).toBeDisabled()
     expect(screen.getByText('Kayıt ekleme yetkiniz yok')).toBeVisible()
     expect(screen.queryByRole('button', { name: /Ödemeyi düzenle/ })).not.toBeInTheDocument()

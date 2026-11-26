@@ -45,9 +45,43 @@ test('ödeme penceresi ve sağdaki yenile düğmesi çalışır', async ({ page 
   await expect(dialog).toBeHidden()
 })
 
+test('mobil ödeme tablosu kompakt satırlar ve yatay kaydırma sunar', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'Mobil tablo düzeni')
+  await addPayment(page, 'Elektrik faturası', '100', 'TRY', 'invoice', false, '30.11.2026')
+  await addPayment(page, 'Kira ödemesi', '200', 'TRY', 'rent')
+  const region = page.getByRole('region', { name: 'Ödeme tablosu' })
+  const rows = region.getByRole('row').filter({ has: page.getByRole('cell') })
+  const record = rows.filter({ hasText: 'Elektrik faturası' })
+
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 })
+    await expect(rows).toHaveCount(2)
+    expect((await record.boundingBox())!.height).toBeLessThanOrEqual(60)
+    expect(await region.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+  }
+
+  await expect(page.getByText('Tüm sütunları ve işlemleri görmek için tabloyu yatay kaydırın.')).toBeVisible()
+  await region.evaluate((element) => { element.scrollLeft = 0 })
+  await region.focus()
+  await page.keyboard.press('ArrowRight')
+  await expect.poll(() => region.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0)
+  await expect(record.getByText('100,00 TL', { exact: true })).toHaveCount(2)
+  await expect(record.getByText('30.11.2026')).toBeVisible()
+  await expect(record.getByText('Ödenmedi', { exact: true })).toBeVisible()
+  await expect(record.getByText('Muhasebe', { exact: true })).toBeVisible()
+  const edit = record.getByRole('button', { name: 'Ödemeyi düzenle: Elektrik faturası' })
+  const remove = record.getByRole('button', { name: 'Ödemeyi sil: Elektrik faturası' })
+  expect((await edit.boundingBox())!.width).toBeGreaterThanOrEqual(44)
+  expect((await remove.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+  await edit.click()
+  await expect(page.getByRole('dialog', { name: 'Ödemeyi Düzenle' })).toBeVisible()
+  await page.getByRole('button', { name: 'Vazgeç' }).click()
+})
+
 test('uzun ödeme değerleri farklı ekranlarda kesilmeden sığar', async ({ page, isMobile }) => {
   await addPayment(page, 'Uzun ödeme açıklaması denemesi', '999999999999,99', 'TRY', 'invoice', true, '30.11.2026')
-  const initialList = isMobile ? page.getByLabel('Mobil ödeme listesi') : page.getByRole('table')
+  const initialList = page.getByRole('table')
   await initialList.getByRole('button', { name: 'Ödemeyi düzenle: Uzun ödeme açıklaması denemesi' }).click()
   const form = page.getByRole('form', { name: 'Ödeme formu' })
   await form.getByLabel('Açıklama').fill('Uzun açıklama ve çokuzunboşluksuzbirödemeaçıklaması')
@@ -55,33 +89,28 @@ test('uzun ödeme değerleri farklı ekranlarda kesilmeden sığar', async ({ pa
 
   for (const width of isMobile ? [320, 390] : [1024, 1250, 1251, 1280, 1366, 1440, 1920]) {
     await page.setViewportSize({ width, height: 900 })
-    const cards = page.getByLabel('Mobil ödeme listesi')
-    const list = width <= 1250 ? cards : page.getByRole('table')
+    const list = page.getByRole('table')
     await expect(list).toBeVisible()
     await expect(list.getByText('Uzun açıklama ve çokuzunboşluksuzbirödemeaçıklaması')).toBeVisible()
     const overflow = await page.evaluate(() => ({
       width: document.documentElement.clientWidth,
       scrollWidth: document.documentElement.scrollWidth,
-      elements: [...document.querySelectorAll('body *')]
-        .filter((element) => element.getBoundingClientRect().right > document.documentElement.clientWidth + 1)
-        .slice(0, 15).map((element) => `${element.tagName}.${element.className}`),
     }))
     expect(overflow.scrollWidth, JSON.stringify(overflow)).toBeLessThanOrEqual(overflow.width)
-    expect(await list.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+    const overflowingCell = await list.locator('th, td').evaluateAll((cells) =>
+      cells.some((cell) => cell.scrollWidth > cell.clientWidth))
+    expect(overflowingCell).toBe(false)
     if (width > 1250) {
       const region = page.getByRole('region', { name: 'Ödeme tablosu' })
       expect(await region.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
-      const overflowingCell = await list.locator('th, td').evaluateAll((cells) =>
-        cells.some((cell) => cell.scrollWidth > cell.clientWidth))
-      expect(overflowingCell).toBe(false)
     }
   }
 })
 
-test('vade tarihi tutardan sonra gösterilir ve gerçekleşen tarihten bağımsız saklanır', async ({ page, isMobile }) => {
+test('vade tarihi tutardan sonra gösterilir ve gerçekleşen tarihten bağımsız saklanır', async ({ page }) => {
   await addPayment(page, 'Vadeli örnek', '10', 'TRY', 'invoice', true)
-  const list = isMobile ? page.getByLabel('Mobil ödeme listesi') : page.getByRole('table')
-  const record = list.getByRole(isMobile ? 'article' : 'row').filter({ hasText: 'Vadeli örnek' })
+  const list = page.getByRole('table')
+  const record = list.getByRole('row').filter({ hasText: 'Vadeli örnek' })
   await expect(record.getByText('Muhasebe', { exact: true })).toBeVisible()
   await record.getByRole('button', { name: 'Ödemeyi düzenle: Vadeli örnek' }).click()
   const form = page.getByRole('form', { name: 'Ödeme formu' })
@@ -93,17 +122,13 @@ test('vade tarihi tutardan sonra gösterilir ve gerçekleşen tarihten bağıms�
   await expect(form).toBeHidden()
   await page.reload()
   await expect(record.getByText('Muhasebe', { exact: true })).toBeVisible()
-  if (!isMobile) {
-    const headings = list.getByRole('columnheader')
-    await expect(headings.nth(2)).toHaveText('Ödeme Şekli')
-    await expect(headings.nth(3)).toHaveText('Tutar')
-    await expect(headings.nth(4)).toHaveText('Kalan')
-    await expect(headings.nth(5)).toHaveText('Vade Tarihi')
-    await expect(headings.nth(6)).toHaveText('Gerçekleşen Ödeme Tarihi')
-    await expect(record.getByRole('cell').nth(5)).toHaveText('30.11.2026')
-  } else {
-    await expect(record.getByText('Vade Tarihi', { exact: true }).locator('..')).toContainText('30.11.2026')
-  }
+  const headings = list.getByRole('columnheader')
+  await expect(headings.nth(2)).toHaveText('Ödeme Şekli')
+  await expect(headings.nth(3)).toHaveText('Tutar')
+  await expect(headings.nth(4)).toHaveText('Kalan')
+  await expect(headings.nth(5)).toHaveText('Vade Tarihi')
+  await expect(headings.nth(6)).toHaveText('Gerçekleşen Ödeme Tarihi')
+  await expect(record.getByRole('cell').nth(5)).toHaveText('30.11.2026')
   await record.getByRole('button', { name: 'Ödemeyi düzenle: Vadeli örnek' }).click()
   await expect(form.locator('#payment-dueOn')).toHaveValue('30.11.2026')
 })
@@ -114,7 +139,7 @@ test('yıl ve ay filtreleri vade tarihine göre birlikte çalışır', async ({ 
   await addPayment(page, 'Ekim 2025', '10', 'TRY', 'invoice', false, '30.10.2025')
 
   const filters = page.getByRole('search', { name: 'Ödemeleri filtrele' })
-  const list = isMobile ? page.getByLabel('Mobil ödeme listesi') : page.getByRole('table')
+  const list = page.getByRole('table')
   await openFilters(page, isMobile)
   await filters.getByRole('combobox', { name: 'Vade yılı' }).selectOption('2025')
   await filters.getByRole('combobox', { name: 'Vade ayı' }).selectOption('11')
@@ -134,7 +159,7 @@ test('ödemeler kalıcıdır; düzenleme, filtreler, dashboard ve silme aynı ve
   await addPayment(page, 'Örnek döviz faturası', '7.50', 'USD', 'invoice', true)
 
   await page.reload()
-  const list = isMobile ? page.getByLabel('Mobil ödeme listesi') : page.getByRole('table')
+  const list = page.getByRole('table')
   await expect(list.getByText('Örnek vergi', { exact: true })).toBeVisible()
   await expect(list.getByText('Örnek fatura', { exact: true })).toBeVisible()
 
@@ -190,7 +215,7 @@ test('yeni ödeme türleri saklanır ve genel bakışta özetlenir', async ({ pa
   await page.reload()
 
   const filters = page.getByRole('search', { name: 'Ödemeleri filtrele' })
-  const list = isMobile ? page.getByLabel('Mobil ödeme listesi') : page.getByRole('table')
+  const list = page.getByRole('table')
   await openFilters(page, isMobile)
   await filters.getByRole('combobox', { name: 'Ödeme türü' }).selectOption({ label: 'Diğer' })
   await expect(list.getByText('Diğer örnek', { exact: true })).toBeVisible()
@@ -211,10 +236,10 @@ test('yeni ödeme türleri saklanır ve genel bakışta özetlenir', async ({ pa
   }
 })
 
-test('kalan tutar kısmi durumu seçer; sıfırda durum kullanıcı seçimine bağlı kalır', async ({ page, isMobile }) => {
+test('kalan tutar kısmi durumu seçer; sıfırda durum kullanıcı seçimine bağlı kalır', async ({ page }) => {
   await addPayment(page, 'Kısmi ödeme örneği', '100', 'TRY', 'invoice')
-  const list = isMobile ? page.getByLabel('Mobil ödeme listesi') : page.getByRole('table')
-  const record = list.getByRole(isMobile ? 'article' : 'row').filter({ hasText: 'Kısmi ödeme örneği' })
+  const list = page.getByRole('table')
+  const record = list.getByRole('row').filter({ hasText: 'Kısmi ödeme örneği' })
 
   await record.getByRole('button', { name: 'Ödemeyi düzenle: Kısmi ödeme örneği' }).click()
   const form = page.getByRole('form', { name: 'Ödeme formu' })
@@ -241,28 +266,28 @@ test('kalan tutar kısmi durumu seçer; sıfırda durum kullanıcı seçimine ba
   await expect(record.getByText('Ödenmedi', { exact: true })).toBeVisible()
 })
 
-test('başka oturumda güncellenen kaydın üzerine eski düzenleme yazılmaz', async ({ page, context, isMobile }) => {
+test('başka oturumda güncellenen kaydın üzerine eski düzenleme yazılmaz', async ({ page, context }) => {
   await addPayment(page, 'İki sekmeli örnek', '10', 'TRY', 'invoice')
-  const list = isMobile ? page.getByLabel('Mobil ödeme listesi') : page.getByRole('table')
+  const list = page.getByRole('table')
   await list.getByRole('button', { name: 'Ödemeyi düzenle: İki sekmeli örnek', exact: true }).click()
   const staleForm = page.getByRole('form', { name: 'Ödeme formu' })
   await staleForm.locator('#payment-amount').fill('99')
 
   const otherPage = await context.newPage()
   await otherPage.goto('/payments')
-  const otherList = isMobile ? otherPage.getByLabel('Mobil ödeme listesi') : otherPage.getByRole('table')
+  const otherList = otherPage.getByRole('table')
   await otherList.getByRole('button', { name: 'Ödemeyi düzenle: İki sekmeli örnek', exact: true }).click()
   const currentForm = otherPage.getByRole('form', { name: 'Ödeme formu' })
   await currentForm.locator('#payment-amount').fill('20')
   await currentForm.getByRole('button', { name: 'Değişiklikleri kaydet' }).click()
-  const currentRecord = otherList.getByRole(isMobile ? 'article' : 'row').filter({ hasText: 'İki sekmeli örnek' })
-  await expect(isMobile ? currentRecord.locator('.mobile-amount') : currentRecord.getByRole('cell').nth(3)).toHaveText('20,00 TL')
+  const currentRecord = otherList.getByRole('row').filter({ hasText: 'İki sekmeli örnek' })
+  await expect(currentRecord.getByRole('cell').nth(3)).toHaveText('20,00 TL')
 
   await staleForm.getByRole('button', { name: 'Değişiklikleri kaydet' }).click()
   await expect(page.getByRole('alert')).toContainText('başka bir kullanıcı tarafından değiştirilmiş')
   await expect(staleForm.locator('#payment-amount')).toHaveValue('99')
   await staleForm.getByRole('button', { name: 'Vazgeç' }).click()
-  const staleRecord = list.getByRole(isMobile ? 'article' : 'row').filter({ hasText: 'İki sekmeli örnek' })
-  await expect(isMobile ? staleRecord.locator('.mobile-amount') : staleRecord.getByRole('cell').nth(3)).toHaveText('20,00 TL')
+  const staleRecord = list.getByRole('row').filter({ hasText: 'İki sekmeli örnek' })
+  await expect(staleRecord.getByRole('cell').nth(3)).toHaveText('20,00 TL')
   await otherPage.close()
 })
