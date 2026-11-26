@@ -268,8 +268,16 @@ td { padding: 0; }
 .cashbook-balance-positive { color: #267348; }
 .cashbook-balance-negative { color: #b42318; }
 .cashbook-current-balance { padding-left: 18px; border-left: 2px solid #297b68; }
-.cashbook .payment-row td { white-space: pre-wrap; overflow-wrap: anywhere; }
+.cashbook .payment-row td { padding: 6px 12px; vertical-align: middle; overflow-wrap: anywhere; }
+.cashbook .payment-row td:first-child { min-width: 0; padding-left: 24px; white-space: nowrap; }
+.cashbook .payment-row td:nth-child(2) { white-space: pre-wrap; }
 .cashbook .payment-row .amount-cell { white-space: nowrap; }
+.cashbook-row-actions { display: flex; align-items: center; gap: 2px; }
+.cashbook-row-action { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; border: 0; border-radius: 6px; background: transparent; color: #226248; }
+.cashbook-row-action:not(:disabled):hover { background: #e8f1ec; }
+.cashbook-row-delete { color: #a0392c; }
+.cashbook-row-delete:not(:disabled):hover { background: #fff3f1; }
+.cashbook-row-action:disabled { opacity: .5; }
 .cashbook-page { padding-bottom: calc(78px + env(safe-area-inset-bottom)); }
 .cashbook-month-bar { position: fixed; z-index: 15; bottom: 0; left: 254px; right: 0; display: flex; gap: 4px; overflow-x: auto; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid #dce5df; background: #fff; box-shadow: 0 -4px 16px #183c3408; }
 .cashbook-month { flex-shrink: 0; min-height: 44px; padding: 10px 16px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: #576b5e; font-size: 12px; font-weight: 600; white-space: nowrap; }

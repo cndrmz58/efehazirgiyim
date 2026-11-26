@@ -1,4 +1,4 @@
-import { BookOpen, Plus } from 'lucide-react'
+import { BookOpen, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { EditorDialog } from '../../components/EditorDialog'
 import { tr } from '../../locales/tr'
@@ -88,9 +88,9 @@ export function CashbookPage({ entries = null, canEdit = false, busy = false, ed
                   <td>{entry.type}</td>
                   <td className="amount-cell cashbook-incoming-amount">{formatMoney(toMinorUnits(entry.incoming), 'TRY')}</td>
                   <td className="amount-cell">{formatMoney(toMinorUnits(entry.outgoing), 'TRY')}</td>
-                  {canEdit && <td><div className="form-actions">
-                    <button className="button-text" type="button" disabled={busy || editing} aria-label={`${text.edit}: ${entry.description}`} onClick={() => onEdit?.(entry.id, selectedPeriod.id)}>{text.edit}</button>
-                    <button className="button-text" type="button" disabled={busy || editing} aria-label={`${text.remove}: ${entry.description}`} onClick={() => onDelete?.(entry.id)}>{text.remove}</button>
+                  {canEdit && <td><div className="cashbook-row-actions">
+                    <button className="cashbook-row-action" type="button" disabled={busy || editing} aria-label={`${text.edit}: ${entry.description}`} title={text.edit} onClick={() => onEdit?.(entry.id, selectedPeriod.id)}><Pencil size={16} aria-hidden="true" /></button>
+                    <button className="cashbook-row-action cashbook-row-delete" type="button" disabled={busy || editing} aria-label={`${text.remove}: ${entry.description}`} title={text.remove} onClick={() => onDelete?.(entry.id)}><Trash2 size={16} aria-hidden="true" /></button>
                   </div></td>}
                 </tr>
               )) : <tr>
