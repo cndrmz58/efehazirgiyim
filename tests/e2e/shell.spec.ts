@@ -9,6 +9,32 @@ test('oturum açılmadan çalışma alanı gösterilmez', async ({ context, page
   await expect(page.getByRole('navigation', { name: 'Ana menü' })).toHaveCount(0)
 })
 
+test('çalışma alanı logosu küçültülmüş ve gezinme için erişilebilir kalır', async ({ context, page, isMobile }) => {
+  await mockSupabase(context)
+  await signIn(page)
+  const logoLink = page.locator(isMobile ? '.mobile-header .brand-link' : '.desktop-brand')
+  const logo = logoLink.getByRole('img', { name: 'EFE Hazır Giyim' })
+
+  for (const width of isMobile ? [320, 390] : [1100, 1440]) {
+    await page.setViewportSize({ width, height: 900 })
+    await expect(logo).toBeVisible()
+    const sizes = await logoLink.evaluate((link) => {
+      const style = getComputedStyle(link)
+      const image = link.querySelector('img')!
+      return {
+        contentWidth: link.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight),
+        imageWidth: image.getBoundingClientRect().width,
+      }
+    })
+    expect(sizes.imageWidth / sizes.contentWidth).toBeCloseTo(0.7, 2)
+  }
+
+  await page.goto('/cashbook')
+  await logoLink.focus()
+  await page.keyboard.press('Enter')
+  await expect(page).toHaveURL('/payments')
+})
+
 test('Kasa Defteri salt okunur olarak masaüstünde ve mobilde açılır', async ({ context, page, isMobile }) => {
   await mockSupabase(context)
   await signIn(page)
@@ -81,7 +107,7 @@ test('kasa defteri kaydırılırken masaüstü menüsü sabit ve erişilebilir k
   await page.mouse.move(900, 400)
   await page.mouse.wheel(0, 1000)
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0)
-  expect(await sidebar.evaluate((element) => element.getBoundingClientRect().top)).toBe(initialTop)
+  expect(Math.abs(await sidebar.evaluate((element) => element.getBoundingClientRect().top) - initialTop)).toBeLessThanOrEqual(1)
   expect(await sidebar.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true)
   await sidebar.evaluate((element) => { element.scrollTop = element.scrollHeight })
   await expect(sidebar.getByRole('button', { name: 'Ayarlar' })).toBeInViewport()

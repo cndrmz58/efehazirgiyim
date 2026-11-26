@@ -28,7 +28,7 @@ h1, h2, h3, p { margin: 0; }
 .sidebar { width: 254px; flex-shrink: 0; background: linear-gradient(180deg, #12372f 0%, #0d2d27 100%); border-right: 1px solid #0a2923; padding: 30px 14px 18px; display: flex; flex-direction: column; min-height: 100dvh; box-shadow: 8px 0 24px rgba(10, 41, 35, .06); }
 .brand-link { display: flex; align-items: center; color: #183c34; }
 .desktop-brand { justify-content: center; margin: 0 8px 34px; padding: 8px; background: #fff; border: 1px solid rgba(10,41,35,.08); border-radius: 12px; box-shadow: 0 8px 18px rgba(3,23,18,.12); }
-.brand-logo { display: block; width: 100%; height: auto; }
+.brand-logo { display: block; width: 70%; height: auto; }
 .navigation-label { color: #92b2a7; font-size: 9px; font-weight: 800; letter-spacing: .16em; padding: 0 14px; margin-bottom: 12px; }
 .nav-link { display: flex; align-items: center; gap: 13px; min-height: 46px; padding: 10px 12px; margin-bottom: 4px; font-size: 13px; font-weight: 600; color: #c3d5ce; border: 1px solid transparent; border-radius: 9px; transition: background .16s ease, color .16s ease, border-color .16s ease, transform .16s ease; }
 .nav-link svg { flex-shrink: 0; color: #91b1a5; stroke-width: 1.8; }
@@ -170,7 +170,7 @@ td { padding: 0; }
 .payments-table th { padding: 14px 8px; white-space: normal; overflow-wrap: anywhere; }
 .payments-table th:first-child, .payments-table .payment-row td:first-child { padding-left: 12px; min-width: 0; }
 .payments-table .payment-row td { padding: 18px 8px; }
-.payments-table .payment-row-unpaid { background: #fff5f4; }
+.payments-table .payment-row-not-paid { background: #fff5f4; }
 .payments-table .amount-cell { white-space: normal; overflow-wrap: anywhere; }
 .payments-table .date-cell { white-space: nowrap; }
 .payments-table .notes-cell { min-width: 0; }

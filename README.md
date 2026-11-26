@@ -44,7 +44,7 @@ for both new records and the initial table filter. New or edited records become
 visible by resetting other filters and selecting that record's currency.
 On smaller screens, the payment table uses compact rows and horizontal scrolling
 to reach all fields and the edit/delete actions.
-Rows marked **Ödenmedi** also have a subtle red background.
+Rows marked **Ödenmedi** or **Kısmen Ödendi** also have a subtle red background.
 
 The **Kasa Defteri** (`/cashbook`) is connected to Supabase through the existing
 authenticated client, with Tarih, Açıklama, İşlem Türü, Borç (Giren), and Alacak

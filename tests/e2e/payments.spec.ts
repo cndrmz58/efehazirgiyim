@@ -45,14 +45,14 @@ test('ödeme penceresi ve sağdaki yenile düğmesi çalışır', async ({ page 
   await expect(dialog).toBeHidden()
 })
 
-test('yalnız ödenmeyen satır hafif kırmızı gösterilir ve durum değişince güncellenir', async ({ page }) => {
+test('ödenmeyen ve kısmen ödenen satırlar kırmızı, ödenen satırlar beyaz gösterilir', async ({ page }) => {
   await addPayment(page, 'Ödenmemiş fatura', '100', 'TRY', 'invoice')
   await addPayment(page, 'Ödenmiş fatura', '100', 'TRY', 'invoice', true)
   const rows = page.getByRole('table').getByRole('row')
   const unpaid = rows.filter({ hasText: 'Ödenmemiş fatura' })
   const paid = rows.filter({ hasText: 'Ödenmiş fatura' })
   await expect(unpaid).toHaveCSS('background-color', 'rgb(255, 245, 244)')
-  await expect(paid).not.toHaveCSS('background-color', 'rgb(255, 245, 244)')
+  await expect(paid).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
   await expect(unpaid.getByText('Ödenmedi', { exact: true })).toBeVisible()
 
   await unpaid.getByRole('button', { name: 'Ödemeyi düzenle: Ödenmemiş fatura' }).click()
@@ -61,7 +61,16 @@ test('yalnız ödenmeyen satır hafif kırmızı gösterilir ve durum değişinc
   await form.getByRole('button', { name: 'Değişiklikleri kaydet' }).click()
   await expect(form).toBeHidden()
   await expect(unpaid.getByText('Kısmen Ödendi', { exact: true })).toBeVisible()
-  await expect(unpaid).not.toHaveCSS('background-color', 'rgb(255, 245, 244)')
+  await expect(unpaid).toHaveCSS('background-color', 'rgb(255, 245, 244)')
+
+  await unpaid.getByRole('button', { name: 'Ödemeyi düzenle: Ödenmemiş fatura' }).click()
+  await form.locator('#payment-remainingAmount').fill('0')
+  await form.locator('#payment-status').selectOption('paid')
+  await form.locator('#payment-paidOn').fill('18.11.2026')
+  await form.getByRole('button', { name: 'Değişiklikleri kaydet' }).click()
+  await expect(form).toBeHidden()
+  await expect(unpaid.getByText('Ödendi', { exact: true })).toBeVisible()
+  await expect(unpaid).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
 })
 
 test('mobil ödeme tablosu kompakt satırlar ve yatay kaydırma sunar', async ({ page, isMobile }) => {
