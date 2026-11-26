@@ -57,6 +57,13 @@ export async function mockSupabase(context: BrowserContext, options: { cashbookR
         'content-range': '0-0/1',
       } })
     }
+    if (method === 'GET' && table === 'payment_historical_creator_labels') {
+      return route.fulfill({ json: [], headers: {
+        'access-control-allow-origin': '*',
+        'access-control-expose-headers': 'content-range',
+        'content-range': '*/0',
+      } })
+    }
     if (table !== 'payments' && table !== 'cashbook_entries') return route.fulfill({ status: 404, json: {} })
     const rows = table === 'payments' ? paymentRows : cashbookRows
 

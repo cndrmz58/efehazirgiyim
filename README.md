@@ -30,7 +30,7 @@ Excel-like payment table rather than automated financial operations:
 | Vade Tarihi | Optional, manually entered due date, independent of status |
 | Gerçekleşen Ödeme Tarihi | Actual payment date, not the due date |
 | Durum | Dropdown: Ödendi / Ödenmedi / Kısmen Ödendi |
-| İşlem Yapan | Automatically displayed account that created the record; unchanged by edits |
+| İşlem Yapan | Account that created the record; older records have a separately assigned Muhasebe display label |
 | Açıklama | Manually entered notes |
 
 The interface supports creating, editing, and deleting payments, searchable
@@ -431,7 +431,8 @@ page overflow, and internal table scrolling. Its loopback-only preview server
 starts and stops with the test run. Browser checks also cover test payment
 creation/editing/deletion, paid-date validation, persistence across reloads,
 currency-isolated overview totals, clearing data, and stale cross-tab edits.
-Populated payments use mobile cards; the empty-table header remains scrollable.
+Payment columns fit the desktop table; narrower screens use payment cards and
+show the empty state without a wide table header.
 
 CI runs lint, strict typechecking, unit tests, production build, and Chromium
 browser checks. It does not need production credentials or company data.

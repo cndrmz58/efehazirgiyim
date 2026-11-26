@@ -26,6 +26,11 @@ const rowSchema = z.object({
 
 const organizationRowSchema = z.object({ id: z.uuid(), name: z.string() })
 const creatorLabelSchema = z.object({ organization_id: z.uuid(), user_id: z.uuid(), display_name: z.string().trim().min(1).max(80) })
+const historicalCreatorLabelSchema = z.object({
+  organization_id: z.uuid(),
+  through_created_at: z.iso.datetime({ offset: true }),
+  display_name: z.string().trim().min(1).max(80),
+})
 const organizationRoleSchema = z.object({
   organization_id: z.uuid(),
   role: z.enum(['admin', 'member']),
@@ -34,7 +39,8 @@ const organizationRoleSchema = z.object({
 
 export type PaymentOrganization = { id: string; name: string; canEdit: boolean }
 export type PaymentCreatorLabel = z.infer<typeof creatorLabelSchema>
-export type PaymentWorkspace = { userId: string; organizations: PaymentOrganization[]; payments: Payment[]; creatorLabels: PaymentCreatorLabel[] }
+export type HistoricalCreatorLabel = z.infer<typeof historicalCreatorLabelSchema>
+export type PaymentWorkspace = { userId: string; organizations: PaymentOrganization[]; payments: Payment[]; creatorLabels: PaymentCreatorLabel[]; historicalCreatorLabels: HistoricalCreatorLabel[] }
 export type Failure = 'conflict' | 'forbidden' | 'invalid' | 'incomplete' | 'unavailable'
 export type Result<T> = { ok: true; value: T } | { ok: false; reason: Failure }
 
@@ -97,24 +103,27 @@ export async function loadPaymentWorkspace(client: SupabaseClient): Promise<Resu
     if (sessionError || !session) return failure('forbidden')
     const userId = session.user.id
 
-    const [organizations, organizationRoles, payments, creatorLabels] = await Promise.all([
+    const [organizations, organizationRoles, payments, creatorLabels, historicalCreatorLabels] = await Promise.all([
       client.from('organizations').select('id, name').order('name'),
       client.from('organization_memberships').select('organization_id, role, payment_role').eq('user_id', userId).eq('active', true),
       client.from('payments').select(columns, { count: 'exact' }).order('created_at', { ascending: false }),
       client.from('payment_creator_labels').select('organization_id, user_id, display_name', { count: 'exact' }),
+      client.from('payment_historical_creator_labels').select('organization_id, through_created_at, display_name', { count: 'exact' }),
     ])
-    const error = organizations.error ?? organizationRoles.error ?? payments.error ?? creatorLabels.error
+    const error = organizations.error ?? organizationRoles.error ?? payments.error ?? creatorLabels.error ?? historicalCreatorLabels.error
     if (error) return failure(classify(error))
 
     const parsedOrganizations = z.array(organizationRowSchema).safeParse(organizations.data)
     const parsedOrganizationRoles = z.array(organizationRoleSchema).safeParse(organizationRoles.data)
     const parsedPayments = toPayments(payments.data ?? [])
     const parsedLabels = z.array(creatorLabelSchema).safeParse(creatorLabels.data)
-    if (!parsedOrganizations.success || !parsedOrganizationRoles.success || !parsedPayments || !parsedLabels.success) {
+    const parsedHistoricalLabels = z.array(historicalCreatorLabelSchema).safeParse(historicalCreatorLabels.data)
+    if (!parsedOrganizations.success || !parsedOrganizationRoles.success || !parsedPayments || !parsedLabels.success || !parsedHistoricalLabels.success) {
       return failure('unavailable')
     }
     // Never show partial totals if the API row limit truncated the result.
-    if (payments.count !== parsedPayments.length || creatorLabels.count !== parsedLabels.data.length) return failure('incomplete')
+    if (payments.count !== parsedPayments.length || creatorLabels.count !== parsedLabels.data.length ||
+      historicalCreatorLabels.count !== parsedHistoricalLabels.data.length) return failure('incomplete')
 
     const roles = new Map(parsedOrganizationRoles.data.map((membership) => [membership.organization_id, membership]))
     return {
@@ -123,6 +132,7 @@ export async function loadPaymentWorkspace(client: SupabaseClient): Promise<Resu
         userId,
         payments: parsedPayments,
         creatorLabels: parsedLabels.data,
+        historicalCreatorLabels: parsedHistoricalLabels.data,
         organizations: parsedOrganizations.data.flatMap(({ id, name }) => {
           const membership = roles.get(id)
           if (!membership || (membership.role !== 'admin' && !membership.payment_role)) return []

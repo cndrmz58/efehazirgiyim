@@ -39,6 +39,7 @@ describe('genel bakış vade listeleri', () => {
       ],
       organizations: [{ id: organizationId, name: 'EFE Tekstil', canEdit: false }],
       creatorLabels: [],
+      historicalCreatorLabels: [],
       canEdit: false,
       busy: false,
       error: null,

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { paymentInputSchema, type Payment, type PaymentInput } from './payment-model'
 import {
   createPayment, deletePayment as removePayment, loadPaymentWorkspace, updatePayment,
-  type PaymentOrganization, type PaymentCreatorLabel, type Failure,
+  type PaymentOrganization, type PaymentCreatorLabel, type HistoricalCreatorLabel, type Failure,
 } from './payment-repository'
 import { PaymentContext, type PaymentStoreStatus } from './payment-store'
 
@@ -21,10 +21,11 @@ type State = {
   payments: Payment[]
   organizations: PaymentOrganization[]
   creatorLabels: PaymentCreatorLabel[]
+  historicalCreatorLabels: HistoricalCreatorLabel[]
   error: string | null
 }
 
-const emptyState = (status: PaymentStoreStatus): State => ({ status, userId: null, payments: [], organizations: [], creatorLabels: [], error: null })
+const emptyState = (status: PaymentStoreStatus): State => ({ status, userId: null, payments: [], organizations: [], creatorLabels: [], historicalCreatorLabels: [], error: null })
 
 export function PaymentsProvider({ client, children }: { client: SupabaseClient | null; children: ReactNode }) {
   const [state, setState] = useState<State>(() => emptyState(client ? 'loading' : 'unconfigured'))
@@ -122,6 +123,7 @@ export function PaymentsProvider({ client, children }: { client: SupabaseClient 
       payments: state.payments,
       organizations: state.organizations,
       creatorLabels: state.creatorLabels,
+      historicalCreatorLabels: state.historicalCreatorLabels,
       canEdit: state.organizations.some(({ canEdit }) => canEdit),
       busy,
       error: state.error ?? actionError,

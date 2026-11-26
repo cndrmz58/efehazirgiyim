@@ -45,6 +45,39 @@ test('ödeme penceresi ve sağdaki yenile düğmesi çalışır', async ({ page 
   await expect(dialog).toBeHidden()
 })
 
+test('uzun ödeme değerleri farklı ekranlarda kesilmeden sığar', async ({ page, isMobile }) => {
+  await addPayment(page, 'Uzun ödeme açıklaması denemesi', '999999999999,99', 'TRY', 'invoice', true, '30.11.2026')
+  const initialList = isMobile ? page.getByLabel('Mobil ödeme listesi') : page.getByRole('table')
+  await initialList.getByRole('button', { name: 'Ödemeyi düzenle: Uzun ödeme açıklaması denemesi' }).click()
+  const form = page.getByRole('form', { name: 'Ödeme formu' })
+  await form.getByLabel('Açıklama').fill('Uzun açıklama ve çokuzunboşluksuzbirödemeaçıklaması')
+  await form.getByRole('button', { name: 'Değişiklikleri kaydet' }).click()
+
+  for (const width of isMobile ? [320, 390] : [1024, 1250, 1251, 1280, 1366, 1440, 1920]) {
+    await page.setViewportSize({ width, height: 900 })
+    const cards = page.getByLabel('Mobil ödeme listesi')
+    const list = width <= 1250 ? cards : page.getByRole('table')
+    await expect(list).toBeVisible()
+    await expect(list.getByText('Uzun açıklama ve çokuzunboşluksuzbirödemeaçıklaması')).toBeVisible()
+    const overflow = await page.evaluate(() => ({
+      width: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+      elements: [...document.querySelectorAll('body *')]
+        .filter((element) => element.getBoundingClientRect().right > document.documentElement.clientWidth + 1)
+        .slice(0, 15).map((element) => `${element.tagName}.${element.className}`),
+    }))
+    expect(overflow.scrollWidth, JSON.stringify(overflow)).toBeLessThanOrEqual(overflow.width)
+    expect(await list.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+    if (width > 1250) {
+      const region = page.getByRole('region', { name: 'Ödeme tablosu' })
+      expect(await region.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+      const overflowingCell = await list.locator('th, td').evaluateAll((cells) =>
+        cells.some((cell) => cell.scrollWidth > cell.clientWidth))
+      expect(overflowingCell).toBe(false)
+    }
+  }
+})
+
 test('vade tarihi tutardan sonra gösterilir ve gerçekleşen tarihten bağımsız saklanır', async ({ page, isMobile }) => {
   await addPayment(page, 'Vadeli örnek', '10', 'TRY', 'invoice', true)
   const list = isMobile ? page.getByLabel('Mobil ödeme listesi') : page.getByRole('table')

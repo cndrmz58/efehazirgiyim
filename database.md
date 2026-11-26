@@ -31,6 +31,9 @@ already-applied migration. SQL regression tests live in
 - [Payment creator labels](./supabase/migrations/20261126100000_payment_creator_labels.sql):
   the migration and operator assignments must be applied before deploying the
   frontend. Hosted activation is not verified.
+- [Historical payment creator labels](./supabase/migrations/20261126110000_historical_payment_creator_labels.sql):
+  enables a separate operator-assigned historical display label. Migration,
+  operator activation and hosted verification are pending.
 - Payment method is stored as `check`, `cash`, or `bank`. Historical rows stay
   null because their method cannot be inferred; new rows must specify a method.
 - [Manual cashbook](./supabase/migrations/20261124140000_cashbook.sql):
@@ -149,16 +152,26 @@ must still be verified after deployment.
   time, and full old/new row JSON. A `security definer` trigger writes it;
   API roles have no write privileges. Only active organization admins can read it.
   Deleting a payment removes it from the table, but the audit history keeps it.
-- The **İşlem Yapan** column identifies the account that created the record,
-  not its last editor or necessarily the person who performed the real-world
-  payment. `created_by` remains server-stamped and unchanged on edits. A null
-  actor or an actor without an assigned label is displayed as `Bilinmiyor`;
-  historical records are not guessed or rewritten.
+- The **İşlem Yapan** column normally identifies the account that created the
+  record, not its last editor or necessarily the person who performed the
+  real-world payment. `created_by` remains server-stamped and unchanged on
+  edits. A null actor or an actor without an assigned label is displayed as
+  `Bilinmiyor`, unless the separately documented historical assignment applies.
 - `public.payment_creator_labels` maps an organization membership to an
   operator-assigned display label. Payment readers may read only their
   accessible organizations' labels; API roles cannot modify them. The
   application never derives another user's label from email or client input.
   Labels are current account labels rather than historical snapshots.
+- On the owner's 2026-11-26 request, payments created through
+  `2026-11-26 09:53:14.682 UTC` in the accounting account's organization
+  are displayed as `Muhasebe`, including records with another or unknown
+  creator. This is an administrative display assignment, not a rewrite or
+  verification of the creator. `public.payment_historical_creator_labels`
+  records the organization, cutoff, label and assignment time separately;
+  it does not change payments, revisions or audit history. Newer payments
+  continue to use their server-recorded creator and account label. Only payment
+  readers can read the assignment for their organization; API roles cannot
+  write it.
 
 Deployment: apply `20261126100000_payment_creator_labels.sql` before the
 matching frontend. Then, as database owner, verify the target organization and
@@ -178,6 +191,17 @@ on conflict (organization_id, user_id) do update set display_name = excluded.dis
 The foreign key rejects missing memberships. Verify the three assignments and
 the actual payment flow after deployment; labels are not populated by the
 migration and no existing payment history is changed.
+
+For the owner's historical assignment, apply
+`20261126110000_historical_payment_creator_labels.sql` and run
+[assign_historical_payment_creator.sql](./supabase/operators/assign_historical_payment_creator.sql)
+as the database owner before deploying the matching frontend. The operator
+script resolves the confirmed accounting account and its single active
+organization, assigns its current account label and the fixed historical
+cutoff, and stops on ambiguity or an existing conflicting assignment. It
+does not rewrite payments. Review the target organization and resulting
+assignment before enabling the frontend; do not run test fixtures in production.
+The Erkan and Kesim account labels still require the verified assignments above.
 
 Use a database owner only for migrations and disposable SQL tests; no product
 workflow should use owner credentials. Collections, settlements, currency

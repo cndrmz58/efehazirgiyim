@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react'
 import type { Payment, PaymentInput } from './payment-model'
-import type { PaymentCreatorLabel, PaymentOrganization } from './payment-repository'
+import type { HistoricalCreatorLabel, PaymentCreatorLabel, PaymentOrganization } from './payment-repository'
 
 export type PaymentStoreStatus = 'unconfigured' | 'loading' | 'ready' | 'error'
 
@@ -9,6 +9,7 @@ export type PaymentStore = {
   payments: readonly Payment[]
   organizations: readonly PaymentOrganization[]
   creatorLabels: readonly PaymentCreatorLabel[]
+  historicalCreatorLabels: readonly HistoricalCreatorLabel[]
   canEdit: boolean
   busy: boolean
   error: string | null

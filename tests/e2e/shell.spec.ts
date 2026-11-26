@@ -124,10 +124,10 @@ test('üretim çıktısında tablo ve gezinme ekran boyutuna uyum sağlar', asyn
   await expect(page).toHaveURL('/payments')
   const pageFits = await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)
   expect(pageFits).toBe(true)
-  const tableRegion = page.getByRole('region', { name: 'Yatay kaydırılabilir ödeme tablosu' })
+  const tableRegion = page.getByRole('region', { name: 'Ödeme tablosu' })
   await expect(tableRegion).toBeVisible()
   if (isMobile) {
-    expect(await tableRegion.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true)
+    expect(await tableRegion.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
   }
 
   await expect(page.getByText('Test modu')).toHaveCount(0)

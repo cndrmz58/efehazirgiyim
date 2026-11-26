@@ -158,8 +158,22 @@ td { padding: 0; }
 .payment-row td { padding: 18px 20px; border-bottom: 1px solid #e7ece8; font-size: 12px; vertical-align: top; overflow-wrap: anywhere; }
 .payment-row td:first-child { padding-left: 24px; min-width: 170px; }
 .payment-row strong { font-weight: 600; }
-.payments-table { min-width: 1250px; }
+.payments-table { table-layout: fixed; }
+.payments-table .payment-col-detail { width: 16%; }
+.payments-table .payment-col-kind { width: 7%; }
+.payments-table .payment-col-amount { width: 10%; }
+.payments-table .payment-col-due { width: 8%; }
+.payments-table .payment-col-paid { width: 11%; }
+.payments-table .payment-col-status { width: 8%; }
+.payments-table .payment-col-creator { width: 9%; }
+.payments-table .payment-col-notes { width: 14%; }
+.payments-table th { padding: 14px 8px; white-space: normal; overflow-wrap: anywhere; }
+.payments-table th:first-child, .payments-table .payment-row td:first-child { padding-left: 12px; min-width: 0; }
+.payments-table .payment-row td { padding: 18px 8px; }
+.payments-table .amount-cell { white-space: normal; overflow-wrap: anywhere; }
 .payments-table .date-cell { white-space: nowrap; }
+.payments-table .notes-cell { min-width: 0; }
+.payments-table .payment-status { white-space: normal; }
 .amount-cell { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .notes-cell { min-width: 130px; max-width: 260px; white-space: pre-wrap; }
 .row-actions { display: flex; gap: 16px; }
@@ -309,6 +323,21 @@ td { padding: 0; }
   .currency-summary dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 }
 
+@media (max-width: 1250px) {
+  .populated-payment-table { display: none; }
+  .table-scroll .payments-table { min-width: 0; }
+  .table-scroll:not(.populated-payment-table) .payments-table thead { display: none; }
+  .payment-mobile-list { display: block; padding: 0 16px 16px; }
+  .payment-mobile-card { border: 1px solid #dfe7e1; border-radius: 8px; padding: 16px; margin-top: 12px; overflow-wrap: anywhere; }
+  .mobile-card-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .mobile-card-heading h3 { font-size: 14px; font-weight: 650; }
+  .mobile-amount { font-size: 21px; font-weight: 650; margin: 16px 0; font-variant-numeric: tabular-nums; }
+  .payment-mobile-card dl { margin: 0; font-size: 12px; }
+  .payment-mobile-card dl > div { margin-bottom: 12px; }
+  .payment-mobile-card dt { color: #65776b; font-size: 10px; margin-bottom: 5px; }
+  .payment-mobile-card dd { margin: 0; white-space: pre-wrap; }
+}
+
 @media (max-width: 767px) {
   .cashbook-month-bar { left: 0; padding-inline: calc(12px + env(safe-area-inset-left)) calc(12px + env(safe-area-inset-right)); }
   .cashbook-balance.settings-card { padding: 14px 16px; margin-bottom: 12px; }
@@ -341,7 +370,9 @@ td { padding: 0; }
   .sidebar nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px; }
   .nav-link { font-size: 12px; gap: 8px; padding: 10px; }
   .workspace-header { min-height: 48px; padding: 10px 18px; }
-  .workspace-header > span:first-child { font-size: 10px; }
+  .workspace-header > span:first-child { flex: 1; min-width: 0; flex-wrap: wrap; gap: 4px; font-size: 10px; }
+  .workspace-header-actions { flex-shrink: 0; }
+  .account-trigger-copy strong { max-width: clamp(70px, 22vw, 120px); }
   .development-badge { font-size: 9px; padding-inline: 7px; }
   main { padding: 20px calc(16px + env(safe-area-inset-right)) calc(22px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left)); }
   .setup-notice { font-size: 11px; margin-bottom: 25px; }
@@ -368,16 +399,6 @@ td { padding: 0; }
   .settings-card { padding: 20px; }
   .payment-form-grid { grid-template-columns: 1fr; }
   .form-actions > button { width: 100%; }
-  .populated-payment-table { display: none; }
-  .payment-mobile-list { display: block; padding: 0 16px 16px; }
-  .payment-mobile-card { border: 1px solid #dfe7e1; border-radius: 8px; padding: 16px; margin-top: 12px; overflow-wrap: anywhere; }
-  .mobile-card-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-  .mobile-card-heading h3 { font-size: 14px; font-weight: 650; }
-  .mobile-amount { font-size: 21px; font-weight: 650; margin: 16px 0; font-variant-numeric: tabular-nums; }
-  .payment-mobile-card dl { margin: 0; font-size: 12px; }
-  .payment-mobile-card dl > div { margin-bottom: 12px; }
-  .payment-mobile-card dt { color: #65776b; font-size: 10px; margin-bottom: 5px; }
-  .payment-mobile-card dd { margin: 0; white-space: pre-wrap; }
   .currency-summary:not(.status-summary) dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .status-summary dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .currency-summary dd { font-size: 22px; }

@@ -28,6 +28,7 @@ function workspace(role: 'manager' | 'viewer' | null, rows: unknown[] = [row()],
     organizations: { data: [{ id: organizationId, name: 'Şirket' }], error: null },
     organization_memberships: { data: [{ organization_id: organizationId, role: 'member', payment_role: role }], error: null },
     payment_creator_labels: { data: [{ organization_id: organizationId, user_id: userId, display_name: 'Muhasebe' }], error: null, count: 1 },
+    payment_historical_creator_labels: { data: [], error: null, count: 0 },
     payments: { data: rows, error: null, count },
   }[table] ?? { data: null, error: { code: 'unexpected' } })
 }
@@ -99,6 +100,38 @@ describe('Supabase ödeme tablosu', () => {
       : base(table, calls))
     expect(await screen.findByRole('heading', { name: 'Ödemeler yüklenemedi' })).toBeVisible()
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
+  })
+
+  it('eski kayıt atamasını yalnız ilgili şirket ve kesin zaman sınırına uygular', async () => {
+    const otherUser = '00000000-0000-4000-8000-000000000002'
+    const otherOrg = '00000000-0000-4000-8000-000000000012'
+    const cutoff = '2026-11-26T09:53:14.682+00:00'
+    const base = workspace('viewer', [
+      row({ detail: 'Sınırdaki kayıt', created_by: otherUser, created_at: cutoff }),
+      row({ id: '00000000-0000-4000-8000-000000000032', detail: 'Sonraki kayıt', created_by: otherUser, created_at: '2026-11-26T12:53:14.682001+03:00' }),
+      row({ id: '00000000-0000-4000-8000-000000000033', detail: 'Diğer şirket', created_by: null, organization_id: otherOrg, created_at: cutoff }),
+      row({ id: '00000000-0000-4000-8000-000000000034', detail: 'Eski bilinmeyen kayıt', created_by: null, created_at: '2026-11-19T10:00:00Z' }),
+    ])
+    renderPage((table, calls) => {
+      if (table === 'payment_historical_creator_labels') return { data: [{ organization_id: organizationId, through_created_at: cutoff, display_name: 'Muhasebe' }], error: null, count: 1 }
+      if (table === 'payment_creator_labels') return { data: [{ organization_id: organizationId, user_id: otherUser, display_name: 'Erkan' }], error: null, count: 1 }
+      return base(table, calls)
+    })
+
+    const table = await screen.findByRole('table')
+    expect(within(table).getByRole('row', { name: /Sınırdaki kayıt/ })).toHaveTextContent('Muhasebe')
+    expect(within(table).getByRole('row', { name: /Sınırdaki kayıt/ })).toHaveTextContent('eski kayıt için atanmış gösterim')
+    expect(within(table).getByRole('row', { name: /Eski bilinmeyen kayıt/ })).toHaveTextContent('Muhasebe')
+    expect(within(table).getByRole('row', { name: /Sonraki kayıt/ })).toHaveTextContent('Erkan')
+    expect(within(table).getByRole('row', { name: /Diğer şirket/ })).toHaveTextContent('Bilinmiyor')
+  })
+
+  it('eski kayıt atamaları eksik yüklenirse tabloyu göstermez', async () => {
+    const base = workspace('viewer')
+    renderPage((table, calls) => table === 'payment_historical_creator_labels'
+      ? { data: [], error: null, count: 1 }
+      : base(table, calls))
+    expect(await screen.findByRole('heading', { name: 'Ödemeler yüklenemedi' })).toBeVisible()
   })
 
   it('TL varsayılanını, EUR/USD seçimini ve filtrelerin sıfırlanmasını destekler', async () => {

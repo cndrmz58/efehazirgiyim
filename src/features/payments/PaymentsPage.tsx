@@ -14,6 +14,11 @@ function displayDate(date: string) {
   return date ? <time dateTime={date}>{date.split('-').reverse().join('.')}</time> : '—'
 }
 
+function timestampMicroseconds(value: string) {
+  const fraction = /\.(\d+)(?:Z|[+-]\d{2}:\d{2})$/.exec(value)?.[1] ?? ''
+  return BigInt(Date.parse(value)) * 1000n + BigInt(fraction.padEnd(6, '0').slice(3, 6))
+}
+
 export function PaymentsPage() {
   const store = usePayments()
   const [editor, setEditor] = useState<Payment | 'new' | null>(null)
@@ -30,6 +35,7 @@ export function PaymentsPage() {
   const years = [...new Set(payments.map(({ dueOn }) => dueOn.slice(0, 4)).filter(Boolean))].sort((left, right) => right.localeCompare(left))
   const organizations = new Map(store.organizations.map((organization) => [organization.id, organization]))
   const creatorLabels = new Map(store.creatorLabels.map(({ organization_id, user_id, display_name }) => [`${organization_id}:${user_id}`, display_name]))
+  const historicalCreatorLabels = new Map(store.historicalCreatorLabels.map((label) => [label.organization_id, label]))
   const ready = store.status === 'ready'
   const visible = filterPayments(payments, { query, type, status, currency, year, month })
 
@@ -70,6 +76,10 @@ export function PaymentsPage() {
   }
 
   function creatorName(payment: Payment) {
+    const historical = historicalCreatorLabels.get(payment.organizationId)
+    if (historical && timestampMicroseconds(payment.createdAt) <= timestampMicroseconds(historical.through_created_at)) {
+      return <span>{historical.display_name}<sup aria-hidden="true">*</sup><span className="sr-only"> (eski kayıt için atanmış gösterim)</span></span>
+    }
     return payment.createdBy ? creatorLabels.get(`${payment.organizationId}:${payment.createdBy}`) ?? labels.unknownCreator : labels.unknownCreator
   }
 
@@ -170,9 +180,15 @@ export function PaymentsPage() {
           </div>
         </form>
 
-        <div className={`table-scroll ${visible.length ? 'populated-payment-table' : ''}`} tabIndex={0} role="region" aria-label="Yatay kaydırılabilir ödeme tablosu">
+        <div className={`table-scroll ${visible.length ? 'populated-payment-table' : ''}`} tabIndex={0} role="region" aria-label="Ödeme tablosu">
           <table className="payments-table">
             <caption className="sr-only">Ortak veritabanındaki ödeme kayıtları.</caption>
+            <colgroup>
+              <col className="payment-col-detail" /><col className="payment-col-kind" /><col className="payment-col-kind" />
+              <col className="payment-col-amount" /><col className="payment-col-amount" />
+              <col className="payment-col-due" /><col className="payment-col-paid" /><col className="payment-col-status" />
+              <col className="payment-col-creator" /><col className="payment-col-notes" />
+            </colgroup>
             <thead>
               <tr>
                 <th scope="col">{labels.detail}</th>
@@ -235,7 +251,7 @@ export function PaymentsPage() {
           </div>
         )}
         <div className="table-footer">
-          <span>İşlem Yapan: kaydı oluşturan hesap</span>
+          <span>İşlem Yapan: kaydı oluşturan hesap · * Eski kayıt için atanmış gösterim</span>
           <span>Varsayılan para birimi: TL · EUR ve USD seçilebilir</span>
           <span>Otomatik kur dönüşümü yapılmaz</span>
         </div>
