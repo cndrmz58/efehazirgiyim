@@ -85,7 +85,6 @@ h1 { font-size: clamp(26px, 3vw, 32px); line-height: 1.25; font-weight: 650; let
 .table-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 22px 24px; border-bottom: 1px solid #edf0ed; }
 h2 { font-size: 15px; font-weight: 650; }
 .record-count { font-size: 10px; color: #596e60; background: #eef3ef; border-radius: 5px; padding: 3px 7px; white-space: nowrap; }
-.table-hint { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #68796e; }
 .table-heading-actions { display: flex; align-items: center; gap: 16px; margin-left: auto; }
 .table-filters { padding: 12px 24px; display: grid; grid-template-columns: minmax(180px, 1.7fr) repeat(5, minmax(105px, 1fr)) minmax(112px, .65fr); gap: 10px; align-items: flex-end; }
 .filter-toggle { display: none; }
@@ -398,7 +397,6 @@ td { padding: 0; }
   .filter-field { flex-basis: calc(50% - 5px); min-width: 0; }
   .filter-field:last-of-type { flex-basis: 100%; }
   .search-field input, .filter-field select, .form-field input, .form-field select, .form-field textarea { font-size: 16px; }
-  .table-hint { font-size: 10px; }
   .table-scroll table { min-width: 780px; }
   .empty-state { min-height: 240px; width: calc(100vw - 34px); max-width: 780px; }
   .table-footer { padding: 15px 16px; }

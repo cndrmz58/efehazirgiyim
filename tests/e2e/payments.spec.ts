@@ -25,6 +25,7 @@ async function addPayment(page: Page, detail: string, amount: string, currency: 
 }
 
 test('ödeme penceresi ve sağdaki yenile düğmesi çalışır', async ({ page }) => {
+  await expect(page.getByText('Elle giriş', { exact: true })).toHaveCount(0)
   const refresh = page.getByRole('button', { name: 'Yenile', exact: true })
   await expect(refresh).toHaveClass(/button-secondary/)
   await refresh.click()

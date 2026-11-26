@@ -1,4 +1,4 @@
-import { ArrowDownUp, Pencil, Plus, RefreshCw, Search, SlidersHorizontal, Table2, Trash2 } from 'lucide-react'
+import { Pencil, Plus, RefreshCw, Search, SlidersHorizontal, Table2, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { EditorDialog } from '../../components/EditorDialog'
 import { currencies, defaultCurrency } from '../../lib/currencies'
@@ -123,7 +123,6 @@ export function PaymentsPage() {
             <span className="record-count">{visible.length} / {payments.length} kayıt</span>
           </div>
           <div className="table-heading-actions">
-            <span className="table-hint"><ArrowDownUp size={15} aria-hidden="true" /> Elle giriş</span>
             <button type="button" className="button-secondary" onClick={store.reload}><RefreshCw size={16} aria-hidden="true" /> Yenile</button>
           </div>
         </div>
